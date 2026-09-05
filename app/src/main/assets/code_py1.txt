@@ -1,0 +1,363 @@
+###0001
+# 思路：哈希表记录"数值 -> 下标"，遍历时查询 target - x 是否出现过。
+# 与 Java 版逻辑一致，Python 的字典让代码更简洁。
+class Solution:
+    def twoSum(self, nums: List[int], target: int) -> List[int]:
+        seen = {}                        # 数值 -> 下标
+        for i, x in enumerate(nums):
+            if target - x in seen:       # 配对的数之前出现过
+                return [seen[target - x], i]
+            seen[x] = i                  # 先查再存，避免用同一个元素
+        return []
+# 时间复杂度 O(n)，空间 O(n)。
+
+###0049
+# 思路：异位词排序后相同，用它作字典的 key 分组。
+# 进阶写法：用 26 个字母的计数元组作 key，避免排序。
+class Solution:
+    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:
+        groups = {}
+        for s in strs:
+            key = ''.join(sorted(s))     # 排序后作为统一标识
+            groups.setdefault(key, []).append(s)
+        return list(groups.values())
+# 时间复杂度 O(n·k·log k)，空间 O(n·k)。
+
+###0128
+# 思路：集合去重 + 只从"序列起点"展开计数（x-1 不在集合中的才是起点）。
+class Solution:
+    def longestConsecutive(self, nums: List[int]) -> int:
+        num_set = set(nums)
+        best = 0
+        for x in num_set:
+            if x - 1 in num_set:         # 不是起点，跳过
+                continue
+            length = 1                   # x 是起点，向后数
+            while x + length in num_set:
+                length += 1
+            best = max(best, length)
+        return best
+# 时间复杂度 O(n)（每个数最多访问两次），空间 O(n)。
+
+###0283
+# 思路：快慢双指针：slow 指向下一个非零数应放的位置。
+class Solution:
+    def moveZeroes(self, nums: List[int]) -> None:
+        """原地修改，不要 return 任何东西。"""
+        slow = 0
+        for fast in range(len(nums)):
+            if nums[fast] != 0:
+                nums[slow], nums[fast] = nums[fast], nums[slow]  # Python 交换一行搞定
+                slow += 1
+        # 循环结束后 [slow, end) 全是 0
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0011
+# 思路：对撞双指针，每次移动较矮的一侧（证明见 Java 版解析）。
+class Solution:
+    def maxArea(self, height: List[int]) -> int:
+        left, right = 0, len(height) - 1
+        best = 0
+        while left < right:
+            area = (right - left) * min(height[left], height[right])
+            best = max(best, area)
+            if height[left] < height[right]:
+                left += 1
+            else:
+                right -= 1
+        return best
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0015
+# 思路：排序 + 固定 i + 双指针找两数之和等于 -nums[i]，注意三重去重。
+class Solution:
+    def threeSum(self, nums: List[int]) -> List[List[int]]:
+        nums.sort()
+        n = len(nums)
+        res = []
+        for i in range(n - 2):
+            if i > 0 and nums[i] == nums[i - 1]:   # 跳过重复的固定数
+                continue
+            if nums[i] + nums[i + 1] + nums[i + 2] > 0:  # 最小三数已 > 0
+                break
+            left, right = i + 1, n - 1
+            while left < right:
+                s = nums[i] + nums[left] + nums[right]
+                if s < 0:
+                    left += 1
+                elif s > 0:
+                    right -= 1
+                else:
+                    res.append([nums[i], nums[left], nums[right]])
+                    while left < right and nums[left] == nums[left + 1]:  # 去重
+                        left += 1
+                    while left < right and nums[right] == nums[right - 1]:
+                        right -= 1
+                    left += 1
+                    right -= 1
+        return res
+# 时间复杂度 O(n^2)，空间 O(log n)。
+
+###0042
+# 思路：双指针。水位由较矮一侧的最大高度决定，按矮侧逐格结算。
+class Solution:
+    def trap(self, height: List[int]) -> int:
+        left, right = 0, len(height) - 1
+        left_max = right_max = water = 0
+        while left < right:
+            if height[left] < height[right]:
+                left_max = max(left_max, height[left])
+                water += left_max - height[left]   # 结算位置 left
+                left += 1
+            else:
+                right_max = max(right_max, height[right])
+                water += right_max - height[right]
+                right -= 1
+        return water
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0003
+# 思路：滑动窗口。last[c] 记录字符最后位置，left 直接跳转，无需逐格收缩。
+class Solution:
+    def lengthOfLongestSubstring(self, s: str) -> int:
+        last = {}                        # 字符 -> 最后出现的下标
+        left = 0
+        best = 0
+        for right, c in enumerate(s):
+            # 重复字符在窗口内时，left 跳到它上一次出现位置的右边
+            if c in last and last[c] >= left:
+                left = last[c] + 1
+            last[c] = right
+            best = max(best, right - left + 1)
+        return best
+# 时间复杂度 O(n)，空间 O(字符集)。
+
+###0438
+# 思路：定长滑动窗口 + 计数数组。Counter 相等即为异位词。
+from collections import Counter
+
+class Solution:
+    def findAnagrams(self, s: str, p: str) -> List[int]:
+        n, m = len(s), len(p)
+        if n < m:
+            return []
+        need = Counter(p)
+        window = Counter(s[:m])          # 第一个窗口
+        res = []
+        if window == need:
+            res.append(0)
+        for i in range(m, n):
+            window[s[i]] += 1            # 右端进
+            window[s[i - m]] -= 1        # 左端出
+            if window[s[i - m]] == 0:
+                del window[s[i - m]]     # 删除 0 计数，保证 Counter 可比较
+            if window == need:
+                res.append(i - m + 1)
+        return res
+# 时间复杂度 O(n)，空间 O(26)。
+
+###0560
+# 思路：前缀和 + 哈希计数：和为 k 的子数组个数
+# = 之前前缀和等于 pre - k 的次数。注意先查询再存。
+from collections import defaultdict
+
+class Solution:
+    def subarraySum(self, nums: List[int], k: int) -> int:
+        count = defaultdict(int)
+        count[0] = 1                     # 空前缀
+        pre = ans = 0
+        for x in nums:
+            pre += x
+            ans += count[pre - k]        # 先查询
+            count[pre] += 1              # 再记录
+        return ans
+# 时间复杂度 O(n)，空间 O(n)。
+
+###0239
+# 思路：单调递减队列（存下标）：队头是窗口最大值，
+# 队尾比新元素小的全部弹出（它们不可能再成为最大值）。
+from collections import deque
+
+class Solution:
+    def maxSlidingWindow(self, nums: List[int], k: int) -> List[int]:
+        dq = deque()                     # 存下标，对应值单调递减
+        res = []
+        for i, x in enumerate(nums):
+            if dq and dq[0] <= i - k:    # 队头滑出窗口
+                dq.popleft()
+            while dq and nums[dq[-1]] <= x:
+                dq.pop()                 # 弹出较小值
+            dq.append(i)
+            if i >= k - 1:
+                res.append(nums[dq[0]])  # 队头即窗口最大值
+        return res
+# 时间复杂度 O(n)，空间 O(k)。
+
+###0076
+# 思路：滑动窗口 + need/window 计数 + valid 达标种类数，
+# 窗口覆盖 t 时收缩左边界并更新最短答案。
+from collections import Counter
+
+class Solution:
+    def minWindow(self, s: str, t: str) -> str:
+        need = Counter(t)
+        window = {}
+        valid = 0                        # 数量已达标的字符种类数
+        left = 0
+        start, min_len = 0, float('inf')
+        for right, c in enumerate(s):
+            if c in need:
+                window[c] = window.get(c, 0) + 1
+                if window[c] == need[c]:
+                    valid += 1
+            while valid == len(need):    # 窗口已覆盖 t，收缩
+                if right - left + 1 < min_len:
+                    start, min_len = left, right - left + 1
+                d = s[left]
+                if d in need:
+                    if window[d] == need[d]:
+                        valid -= 1
+                    window[d] -= 1
+                left += 1
+        return "" if min_len == float('inf') else s[start:start + min_len]
+# 时间复杂度 O(|s| + |t|)，空间 O(字符集)。
+
+###0053
+# 思路：Kadane 算法：f(i) = max(nums[i], f(i-1) + nums[i])。
+class Solution:
+    def maxSubArray(self, nums: List[int]) -> int:
+        cur = best = nums[0]
+        for x in nums[1:]:
+            cur = max(x, cur + x)        # 接不接前面的子数组
+            best = max(best, cur)
+        return best
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0056
+# 思路：按左端点排序后线性合并：重叠就扩展右端点，否则新开一段。
+class Solution:
+    def merge(self, intervals: List[List[int]]) -> List[List[int]]:
+        intervals.sort(key=lambda it: it[0])   # 按左端点排序
+        merged = []
+        for start, end in intervals:
+            if merged and start <= merged[-1][1]:  # 与上一段重叠
+                merged[-1][1] = max(merged[-1][1], end)
+            else:
+                merged.append([start, end])
+        return merged
+# 时间复杂度 O(n log n)，空间 O(log n)。
+
+###0189
+# 思路：三次翻转：整体翻转 -> 前 k 个翻转 -> 后 n-k 个翻转，O(1) 空间。
+class Solution:
+    def rotate(self, nums: List[int], k: int) -> None:
+        """原地修改。"""
+        n = len(nums)
+        k %= n                           # k 可能大于 n
+
+        def reverse(l: int, r: int) -> None:
+            while l < r:
+                nums[l], nums[r] = nums[r], nums[l]
+                l += 1
+                r -= 1
+
+        reverse(0, n - 1)
+        reverse(0, k - 1)
+        reverse(k, n - 1)
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0238
+# 思路：answer[i] = 左侧乘积 × 右侧乘积。先填前缀乘积，
+# 再从右往左乘上滚动后缀乘积。
+class Solution:
+    def productExceptSelf(self, nums: List[int]) -> List[int]:
+        n = len(nums)
+        answer = [1] * n
+        prefix = 1
+        for i in range(n):               # 正序：左侧乘积
+            answer[i] = prefix
+            prefix *= nums[i]
+        suffix = 1
+        for i in range(n - 1, -1, -1):   # 逆序：乘右侧乘积
+            answer[i] *= suffix
+            suffix *= nums[i]
+        return answer
+# 时间复杂度 O(n)，空间 O(1)（输出数组不计）。
+
+###0041
+# 思路：原地哈希：值 x（1..n）换到下标 x-1，第一个没归位的位置即答案。
+class Solution:
+    def firstMissingPositive(self, nums: List[int]) -> int:
+        n = len(nums)
+        for i in range(n):
+            # 用 while 是因为换来的新数也要归位
+            while 1 <= nums[i] <= n and nums[nums[i] - 1] != nums[i]:
+                j = nums[i] - 1          # 目标位置
+                nums[i], nums[j] = nums[j], nums[i]
+        for i in range(n):
+            if nums[i] != i + 1:
+                return i + 1
+        return n + 1                     # 1..n 全部在
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0073
+# 思路：第一行/第一列作标记数组，O(1) 额外空间，与 Java 版一致。
+class Solution:
+    def setZeroes(self, matrix: List[List[int]]) -> None:
+        m, n = len(matrix), len(matrix[0])
+        first_row = any(matrix[0][j] == 0 for j in range(n))
+        first_col = any(matrix[i][0] == 0 for i in range(m))
+        for i in range(1, m):            # 内部含 0 -> 打标记
+            for j in range(1, n):
+                if matrix[i][j] == 0:
+                    matrix[i][0] = 0
+                    matrix[0][j] = 0
+        for i in range(1, m):            # 按标记清零内部
+            for j in range(1, n):
+                if matrix[i][0] == 0 or matrix[0][j] == 0:
+                    matrix[i][j] = 0
+        if first_row:                    # 最后处理第一行/列
+            for j in range(n):
+                matrix[0][j] = 0
+        if first_col:
+            for i in range(m):
+                matrix[i][0] = 0
+# 时间复杂度 O(mn)，空间 O(1)。
+
+###0054
+# 思路：四边界收缩模拟（右→下→左→上），单行/单列时防止重复遍历。
+class Solution:
+    def spiralOrder(self, matrix: List[List[int]]) -> List[int]:
+        top, bottom = 0, len(matrix) - 1
+        left, right = 0, len(matrix[0]) - 1
+        res = []
+        while top <= bottom and left <= right:
+            for j in range(left, right + 1):     # 上行向右
+                res.append(matrix[top][j])
+            for i in range(top + 1, bottom + 1): # 右列向下
+                res.append(matrix[i][right])
+            if top < bottom:                     # 防单行重复
+                for j in range(right - 1, left - 1, -1):
+                    res.append(matrix[bottom][j])
+            if left < right:                     # 防单列重复
+                for i in range(bottom - 1, top, -1):
+                    res.append(matrix[i][left])
+            top += 1
+            bottom -= 1
+            left += 1
+            right -= 1
+        return res
+# 时间复杂度 O(mn)，空间 O(1)（不计输出）。
+
+###0048
+# 思路：顺时针旋转 90° = 转置 + 每行左右翻转。
+class Solution:
+    def rotate(self, matrix: List[List[int]]) -> None:
+        """原地修改。"""
+        n = len(matrix)
+        for i in range(n):               # 转置（只走上三角）
+            for j in range(i + 1, n):
+                matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]
+        for row in matrix:               # 每行左右翻转
+            row.reverse()
+# 时间复杂度 O(n^2)，空间 O(1)。

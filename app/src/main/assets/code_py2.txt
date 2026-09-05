@@ -1,0 +1,389 @@
+###0240
+# 思路：从右上角出发的阶梯搜索：大于 target 左移，小于 target 下移。
+class Solution:
+    def searchMatrix(self, matrix: List[List[int]], target: int) -> bool:
+        i, j = 0, len(matrix[0]) - 1     # 右上角
+        while i < len(matrix) and j >= 0:
+            if matrix[i][j] == target:
+                return True
+            elif matrix[i][j] > target:
+                j -= 1                   # 该列下方更大，排除该列
+            else:
+                i += 1                   # 该行左边更小，排除该行
+        return False
+# 时间复杂度 O(m + n)，空间 O(1)。
+
+###0160
+# 思路：双指针浪漫相遇：走完自己的链就从对面链头继续，
+# 两者总路程相同，相交必在交点相遇，否则同时到 None。
+# 节点定义：class ListNode: def __init__(self, x): self.val = x; self.next = None
+class Solution:
+    def getIntersectionNode(self, headA: ListNode, headB: ListNode) -> Optional[ListNode]:
+        pA, pB = headA, headB
+        while pA is not pB:
+            pA = pA.next if pA else headB
+            pB = pB.next if pB else headA
+        return pA
+# 时间复杂度 O(m + n)，空间 O(1)。
+
+###0206
+# 思路：迭代三指针：保存 next，反指 prev，整体右移。
+class Solution:
+    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        prev, cur = None, head
+        while cur:
+            nxt = cur.next               # 先保存后面的链
+            cur.next = prev              # 反转当前指针
+            prev = cur
+            cur = nxt
+        return prev
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0234
+# 思路：快慢指针找中点 -> 反转后半段 -> 前后半段逐节点比较。
+class Solution:
+    def isPalindrome(self, head: Optional[ListNode]) -> bool:
+        # 1) 快慢指针找中点
+        slow = fast = head
+        while fast.next and fast.next.next:
+            slow = slow.next
+            fast = fast.next.next
+        # 2) 反转后半段
+        prev, cur = None, slow.next
+        while cur:
+            nxt = cur.next
+            cur.next = prev
+            prev = cur
+            cur = nxt
+        # 3) 比较（p2 是较短的一侧）
+        p1, p2 = head, prev
+        while p2:
+            if p1.val != p2.val:
+                return False
+            p1, p2 = p1.next, p2.next
+        return True
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0141
+# 思路：Floyd 快慢指针：有环必相遇，无环 fast 先到 None。
+class Solution:
+    def hasCycle(self, head: Optional[ListNode]) -> bool:
+        slow = fast = head
+        while fast and fast.next:
+            slow = slow.next             # 一步
+            fast = fast.next.next        # 两步
+            if slow is fast:
+                return True
+        return False
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0142
+# 思路：Floyd 两阶段：环内相遇后，一个指针回头，同速前进再相遇即入环口。
+class Solution:
+    def detectCycle(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        slow = fast = head
+        while fast and fast.next:
+            slow = slow.next
+            fast = fast.next.next
+            if slow is fast:             # 阶段一：相遇
+                p = head
+                while p is not slow:     # 阶段二：找入环口
+                    p = p.next
+                    slow = slow.next
+                return p
+        return None
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0021
+# 思路：哑节点 + 归并式拼接，每次取较小的头。
+class Solution:
+    def mergeTwoLists(self, list1: Optional[ListNode],
+                      list2: Optional[ListNode]) -> Optional[ListNode]:
+        dummy = cur = ListNode(0)
+        while list1 and list2:
+            if list1.val <= list2.val:
+                cur.next, list1 = list1, list1.next
+            else:
+                cur.next, list2 = list2, list2.next
+            cur = cur.next
+        cur.next = list1 if list1 else list2   # 剩余部分直接接上
+        return dummy.next
+# 时间复杂度 O(m + n)，空间 O(1)。
+
+###0002
+# 思路：竖式加法：两链或进位还有残留都要生成新节点。
+class Solution:
+    def addTwoNumbers(self, l1: Optional[ListNode],
+                      l2: Optional[ListNode]) -> Optional[ListNode]:
+        dummy = cur = ListNode(0)
+        carry = 0
+        while l1 or l2 or carry:
+            total = carry
+            if l1:
+                total += l1.val
+                l1 = l1.next
+            if l2:
+                total += l2.val
+                l2 = l2.next
+            carry, digit = divmod(total, 10)
+            cur.next = ListNode(digit)
+            cur = cur.next
+        return dummy.next
+# 时间复杂度 O(max(m, n))，空间 O(1)。
+
+###0019
+# 思路：哑节点 + 快慢指针：fast 先走 n+1 步，fast 到 None 时 slow 在前驱上。
+class Solution:
+    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -> Optional[ListNode]:
+        dummy = ListNode(0, head)
+        fast = slow = dummy
+        for _ in range(n + 1):           # fast 先走 n+1 步
+            fast = fast.next
+        while fast:
+            fast = fast.next
+            slow = slow.next
+        slow.next = slow.next.next       # 跳过被删节点
+        return dummy.next
+# 时间复杂度 O(L)，空间 O(1)。
+
+###0024
+# 思路：哑节点 + 每对交换：prev -> a -> b 改为 prev -> b -> a。
+class Solution:
+    def swapPairs(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        dummy = ListNode(0, head)
+        prev = dummy
+        while prev.next and prev.next.next:
+            a, b = prev.next, prev.next.next
+            a.next, b.next, prev.next = b.next, a, b
+            prev = a                     # a 换到后面，成为新的 prev
+        return dummy.next
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0025
+# 思路：每组先检查够 k 个；组内反转，反转后的"尾"指向下一组开头。
+class Solution:
+    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:
+        dummy = ListNode(0, head)
+        prev_group = dummy
+        while True:
+            end = prev_group
+            for _ in range(k):           # 检查是否够 k 个
+                end = end.next
+                if not end:
+                    return dummy.next
+            group_head = prev_group.next
+            next_group = end.next
+            # 组内反转 [group_head, end]
+            prev, cur = next_group, group_head
+            while cur is not next_group:
+                nxt = cur.next
+                cur.next = prev
+                prev = cur
+                cur = nxt
+            prev_group.next = end        # 前一组接新组头
+            prev_group = group_head      # 本组反转后的尾
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0138
+# 思路：节点插入法（O(1) 空间）：拷贝节点插到原节点后面，
+# 用 cur.random.next 找拷贝的 random，最后拆成两条链。
+# 节点定义：class Node: def __init__(self, x): self.val = x; self.next = None; self.random = None
+class Solution:
+    def copyRandomList(self, head: 'Optional[Node]') -> 'Optional[Node]':
+        if not head:
+            return None
+        # 1) 每个节点后插入拷贝：A -> A' -> B -> B'
+        cur = head
+        while cur:
+            copy = Node(cur.val)
+            copy.next = cur.next
+            cur.next = copy
+            cur = copy.next
+        # 2) 设置拷贝节点的 random
+        cur = head
+        while cur:
+            if cur.random:
+                cur.next.random = cur.random.next
+            cur = cur.next.next
+        # 3) 拆链
+        dummy = tail = Node(0)
+        cur = head
+        while cur:
+            copy = cur.next
+            cur.next = copy.next         # 原链恢复
+            tail.next = copy             # 新链接入
+            tail = copy
+            cur = cur.next
+        return dummy.next
+# 时间复杂度 O(n)，空间 O(1)（不计输出）。
+
+###0148
+# 思路：归并排序：快慢指针找中点断开 -> 递归排序两半 -> 合并。
+class Solution:
+    def sortList(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        if not head or not head.next:
+            return head
+        # 快慢指针找中点（fast 从 head.next 出发，切分均衡）
+        slow, fast = head, head.next
+        while fast and fast.next:
+            slow = slow.next
+            fast = fast.next.next
+        mid = slow.next
+        slow.next = None                 # 断开
+        return self._merge(self.sortList(head), self.sortList(mid))
+
+    def _merge(self, a, b):
+        dummy = cur = ListNode(0)
+        while a and b:
+            if a.val <= b.val:
+                cur.next, a = a, a.next
+            else:
+                cur.next, b = b, b.next
+            cur = cur.next
+        cur.next = a if a else b
+        return dummy.next
+# 时间复杂度 O(n log n)，空间 O(log n)。
+
+###0023
+# 思路：分治两两合并：每层工作量 O(n)，共 log k 层。
+class Solution:
+    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:
+        if not lists:
+            return None
+        return self._merge_range(lists, 0, len(lists) - 1)
+
+    def _merge_range(self, lists, lo, hi):
+        if lo == hi:
+            return lists[lo]
+        mid = (lo + hi) // 2
+        return self._merge(self._merge_range(lists, lo, mid),
+                           self._merge_range(lists, mid + 1, hi))
+
+    def _merge(self, a, b):
+        dummy = cur = ListNode(0)
+        while a and b:
+            if a.val <= b.val:
+                cur.next, a = a, a.next
+            else:
+                cur.next, b = b, b.next
+            cur = cur.next
+        cur.next = a if a else b
+        return dummy.next
+# 时间复杂度 O(n log k)，空间 O(log k)。
+
+###0146
+# 思路：哈希表 + 双向链表。用 OrderedDict 也行，
+# 这里手写双向链表更贴近底层原理。
+class Node:
+    def __init__(self, key=0, val=0):
+        self.key, self.val = key, val
+        self.prev = self.next = None
+
+class LRUCache:
+    def __init__(self, capacity: int):
+        self.cap = capacity
+        self.cache = {}                  # key -> Node
+        self.head = Node()               # 哑头：head.next 是最近使用的
+        self.tail = Node()               # 哑尾：tail.prev 是最久未用的
+        self.head.next, self.tail.prev = self.tail, self.head
+
+    def _remove(self, node: Node) -> None:
+        node.prev.next = node.next
+        node.next.prev = node.prev
+
+    def _add_front(self, node: Node) -> None:
+        node.next = self.head.next
+        node.prev = self.head
+        self.head.next.prev = node
+        self.head.next = node
+
+    def get(self, key: int) -> int:
+        if key not in self.cache:
+            return -1
+        node = self.cache[key]
+        self._remove(node)               # 访问过 = 最近使用，提到头部
+        self._add_front(node)
+        return node.val
+
+    def put(self, key: int, value: int) -> None:
+        if key in self.cache:
+            node = self.cache[key]
+            node.val = value
+            self._remove(node)
+            self._add_front(node)
+            return
+        if len(self.cache) >= self.cap:
+            lru = self.tail.prev         # 淘汰最久未使用
+            self._remove(lru)
+            del self.cache[lru.key]
+        fresh = Node(key, value)
+        self.cache[key] = fresh
+        self._add_front(fresh)
+# get 与 put 均为 O(1)，空间 O(capacity)。
+
+###0094
+# 思路：迭代中序：一路向左压栈，弹出访问，再转向右子树。
+class Solution:
+    def inorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        res, stack, cur = [], [], root
+        while cur or stack:
+            while cur:                   # 一路向左
+                stack.append(cur)
+                cur = cur.left
+            cur = stack.pop()            # 弹出最左节点
+            res.append(cur.val)
+            cur = cur.right              # 转向右子树
+        return res
+# 时间复杂度 O(n)，空间 O(h)。
+
+###0104
+# 思路：递归：max(左深, 右深) + 1。
+class Solution:
+    def maxDepth(self, root: Optional[TreeNode]) -> int:
+        if not root:
+            return 0
+        return max(self.maxDepth(root.left), self.maxDepth(root.right)) + 1
+# 时间复杂度 O(n)，空间 O(h)。
+
+###0226
+# 思路：递归交换每个节点的左右子树。
+class Solution:
+    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:
+        if not root:
+            return None
+        root.left, root.right = self.invertTree(root.right), self.invertTree(root.left)
+        return root
+# 时间复杂度 O(n)，空间 O(h)。
+
+###0101
+# 思路：树对称 <=> 左右子树互为镜像：根值相等 + 外侧镜像 + 内侧镜像。
+class Solution:
+    def isSymmetric(self, root: Optional[TreeNode]) -> bool:
+        def is_mirror(a, b):
+            if not a and not b:
+                return True
+            if not a or not b:
+                return False
+            return (a.val == b.val
+                    and is_mirror(a.left, b.right)
+                    and is_mirror(a.right, b.left))
+        return not root or is_mirror(root.left, root.right)
+# 时间复杂度 O(n)，空间 O(h)。
+
+###0543
+# 思路：递归返回"向下最大深度"，同时用非局部变量记录 left+right 的最大值。
+class Solution:
+    def diameterOfBinaryTree(self, root: Optional[TreeNode]) -> int:
+        self.ans = 0
+
+        def depth(node):
+            if not node:
+                return 0
+            l = depth(node.left)
+            r = depth(node.right)
+            self.ans = max(self.ans, l + r)   # 经过 node 的直径候选
+            return max(l, r) + 1
+
+        depth(root)
+        return self.ans
+# 时间复杂度 O(n)，空间 O(h)。

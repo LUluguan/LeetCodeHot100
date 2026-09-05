@@ -1,0 +1,596 @@
+###0102
+// 思路：BFS 层序遍历：数组模拟队列，一次处理一整层（size = tail - head）。
+#include <stdlib.h>
+
+int** levelOrder(struct TreeNode* root, int* returnSize, int** returnColumnSizes) {
+    if (!root) {
+        *returnSize = 0;
+        *returnColumnSizes = NULL;
+        return NULL;
+    }
+    struct TreeNode* q[2005];                // 队列（节点数 <= 2000）
+    int head = 0, tail = 0;
+    int** res = malloc(sizeof(int*) * 2005);
+    int* cols = malloc(sizeof(int) * 2005);
+    int row = 0;
+    q[tail++] = root;
+    while (head < tail) {
+        int size = tail - head;              // 当前层的节点数
+        cols[row] = size;
+        res[row] = malloc(sizeof(int) * size);
+        for (int i = 0; i < size; i++) {
+            struct TreeNode* node = q[head++];
+            res[row][i] = node->val;
+            if (node->left) q[tail++] = node->left;
+            if (node->right) q[tail++] = node->right;
+        }
+        row++;
+    }
+    *returnSize = row;
+    *returnColumnSizes = cols;
+    return res;
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0108
+// 思路：取中点作根，左半递归建左子树，右半递归建右子树，天然高度平衡。
+#include <stdlib.h>
+
+static struct TreeNode* build(int* nums, int lo, int hi) {
+    if (lo > hi) return NULL;
+    int mid = (lo + hi) / 2;
+    struct TreeNode* node = malloc(sizeof(struct TreeNode));
+    node->val = nums[mid];
+    node->left = build(nums, lo, mid - 1);
+    node->right = build(nums, mid + 1, hi);
+    return node;
+}
+
+struct TreeNode* sortedArrayToBST(int* nums, int numsSize) {
+    return build(nums, 0, numsSize - 1);
+}
+// 时间复杂度 O(n)，空间 O(log n)。
+
+###0098
+// 思路：上下界递归：左子树上界收紧为当前值，右子树下界收紧为当前值。
+// 用 long long 防 int 边界值。
+#include <limits.h>
+#include <stdbool.h>
+
+static bool validate(struct TreeNode* node, long long lo, long long hi) {
+    if (!node) return true;
+    if (node->val <= lo || node->val >= hi) return false;
+    return validate(node->left, lo, node->val)
+        && validate(node->right, node->val, hi);
+}
+
+bool isValidBST(struct TreeNode* root) {
+    return validate(root, LLONG_MIN, LLONG_MAX);
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0230
+// 思路：中序遍历第 k 个访问到的节点即第 k 小。k 用指针传递，
+// 找到后把 *k 置为 <= 0，其余递归分支检测到后直接返回（剪枝）。
+static void dfs(struct TreeNode* node, int* k, int* ans) {
+    if (!node || *k <= 0) return;
+    dfs(node->left, k, ans);
+    if (--(*k) == 0) {
+        *ans = node->val;
+        return;
+    }
+    dfs(node->right, k, ans);
+}
+
+int kthSmallest(struct TreeNode* root, int k) {
+    int ans = 0;
+    dfs(root, &k, &ans);
+    return ans;
+}
+// 时间复杂度 O(H + k)，空间 O(H)。
+
+###0199
+// 思路：DFS 按 根→右→左 遍历，每个深度第一个到达的节点即右视图
+// （res 的当前长度就是已覆盖的最大深度）。
+#include <stdlib.h>
+
+static void dfs(struct TreeNode* node, int depth, int* res, int* size) {
+    if (!node) return;
+    if (depth == *size) res[(*size)++] = node->val;   // 本层第一个到达
+    dfs(node->right, depth + 1, res, size);
+    dfs(node->left, depth + 1, res, size);
+}
+
+int* rightSideView(struct TreeNode* root, int* returnSize) {
+    int* res = malloc(sizeof(int) * 105);
+    *returnSize = 0;
+    dfs(root, 0, res, returnSize);
+    return res;
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0114
+// 思路：前驱节点拼接（Morris 式，O(1) 空间）：左子树最右节点接上原右子树，
+// 左子树整体搬到右边，left 置空。
+void flatten(struct TreeNode* root) {
+    struct TreeNode* cur = root;
+    while (cur) {
+        if (cur->left) {
+            struct TreeNode* pre = cur->left;
+            while (pre->right) pre = pre->right;  // 左子树最右节点
+            pre->right = cur->right;              // 原右子树接到前驱
+            cur->right = cur->left;               // 左子树搬到右边
+            cur->left = NULL;
+        }
+        cur = cur->right;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0105
+// 思路：前序首位是根；在中序里找到根的位置（此处线性查找，
+// 进阶可预处理 值->下标 哈希到 O(n)），递归构造左右子树。
+#include <stdlib.h>
+
+static struct TreeNode* build(int* preorder, int* preIdx, int* inorder, int lo, int hi) {
+    if (lo > hi) return NULL;
+    int rootVal = preorder[(*preIdx)++];
+    struct TreeNode* node = malloc(sizeof(struct TreeNode));
+    node->val = rootVal;
+    int mid = lo;
+    while (inorder[mid] != rootVal) mid++;       // 在 [lo, hi] 中定位根
+    node->left = build(preorder, preIdx, inorder, lo, mid - 1);   // 先左后右
+    node->right = build(preorder, preIdx, inorder, mid + 1, hi);
+    return node;
+}
+
+struct TreeNode* buildTree(int* preorder, int preorderSize, int* inorder, int inorderSize) {
+    int preIdx = 0;
+    return build(preorder, &preIdx, inorder, 0, inorderSize - 1);
+}
+// 时间复杂度 O(n^2)（线性查找），空间 O(n)。
+
+###0437
+// 思路：双递归：rootSum 统计"必须从 node 出发"的路径数，
+// pathSum = 每个节点的 rootSum 之和。最坏 O(n^2)，前缀和优化见 Java 版。
+static long rootSum(struct TreeNode* node, long target) {
+    if (!node) return 0;
+    long cnt = (node->val == target) ? 1 : 0;
+    return cnt + rootSum(node->left, target - node->val)
+               + rootSum(node->right, target - node->val);
+}
+
+static long allSum(struct TreeNode* node, int targetSum) {
+    if (!node) return 0;
+    return rootSum(node, targetSum)
+         + allSum(node->left, targetSum)
+         + allSum(node->right, targetSum);
+}
+
+int pathSum(struct TreeNode* root, int targetSum) {
+    return (int)allSum(root, targetSum);
+}
+// 时间复杂度 O(n^2)，空间 O(h)。
+
+###0236
+// 思路：后序递归：找到 p/q 返回自身；左右都非空时当前节点即答案。
+struct TreeNode* lowestCommonAncestor(struct TreeNode* root, struct TreeNode* p,
+                                      struct TreeNode* q) {
+    if (!root || root == p || root == q) return root;
+    struct TreeNode* l = lowestCommonAncestor(root->left, p, q);
+    struct TreeNode* r = lowestCommonAncestor(root->right, p, q);
+    if (l && r) return root;                 // p、q 分居两侧
+    return l ? l : r;
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0124
+// 思路：递归返回"单侧下探最大和"（负贡献舍弃），ans 记录经过当前节点拐弯的最大路径和。
+#include <limits.h>
+
+static int dfs(struct TreeNode* node, int* ans) {
+    if (!node) return 0;
+    int l = dfs(node->left, ans);
+    int r = dfs(node->right, ans);
+    int gainL = l > 0 ? l : 0;
+    int gainR = r > 0 ? r : 0;
+    if (node->val + gainL + gainR > *ans) *ans = node->val + gainL + gainR;
+    return node->val + (gainL > gainR ? gainL : gainR);   // 只能给父节点一侧
+}
+
+int maxPathSum(struct TreeNode* root) {
+    int ans = INT_MIN;
+    dfs(root, &ans);
+    return ans;
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0200
+// 思路：DFS 沉岛：遇到 '1' 计数 +1，并把整个连通块改成 '0'。
+static void dfs(char** grid, int i, int j, int m, int n) {
+    if (i < 0 || i >= m || j < 0 || j >= n || grid[i][j] != '1') return;
+    grid[i][j] = '0';                        // 沉岛 = 标记已访问
+    dfs(grid, i + 1, j, m, n);
+    dfs(grid, i - 1, j, m, n);
+    dfs(grid, i, j + 1, m, n);
+    dfs(grid, i, j - 1, m, n);
+}
+
+int numIslands(char** grid, int gridSize, int* gridColSize) {
+    int m = gridSize, n = gridColSize[0], count = 0;
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            if (grid[i][j] == '1') {
+                count++;
+                dfs(grid, i, j, m, n);
+            }
+    return count;
+}
+// 时间复杂度 O(mn)，空间 O(mn)。
+
+###0994
+// 思路：多源 BFS：所有腐烂橘子同时入队，逐层扩散，层数即分钟数。
+#include <stdlib.h>
+
+int orangesRotting(int** grid, int gridSize, int* gridColSize) {
+    int m = gridSize, n = gridColSize[0];
+    int* qx = malloc(sizeof(int) * m * n);
+    int* qy = malloc(sizeof(int) * m * n);
+    int head = 0, tail = 0, fresh = 0;
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++) {
+            if (grid[i][j] == 2) { qx[tail] = i; qy[tail] = j; tail++; }
+            else if (grid[i][j] == 1) fresh++;
+        }
+    int minutes = 0;
+    int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    while (head < tail && fresh > 0) {
+        minutes++;
+        int size = tail - head;
+        for (int s = 0; s < size; s++) {
+            int x = qx[head], y = qy[head];
+            head++;
+            for (int d = 0; d < 4; d++) {
+                int nx = x + dirs[d][0], ny = y + dirs[d][1];
+                if (nx < 0 || nx >= m || ny < 0 || ny >= n || grid[nx][ny] != 1) continue;
+                grid[nx][ny] = 2;
+                fresh--;
+                qx[tail] = nx;
+                qy[tail] = ny;
+                tail++;
+            }
+        }
+    }
+    free(qx);
+    free(qy);
+    return fresh == 0 ? minutes : -1;
+}
+// 时间复杂度 O(mn)，空间 O(mn)。
+
+###0207
+// 思路：Kahn 拓扑排序：入度 0 先学，学完把后继入度减一。
+// 邻接表用"链式前向星"数组模拟（head/eNext/eTo）。
+#include <stdbool.h>
+#include <stdlib.h>
+
+bool canFinish(int numCourses, int** prerequisites, int prerequisitesSize,
+               int* prerequisitesColSize) {
+    int m = prerequisitesSize;
+    int* eTo = malloc(sizeof(int) * m);      // 边指向的课程
+    int* eNext = malloc(sizeof(int) * m);    // 同起点的下一条边
+    int* eHead = malloc(sizeof(int) * numCourses);
+    int* indeg = calloc(numCourses, sizeof(int));
+    for (int i = 0; i < numCourses; i++) eHead[i] = -1;
+    for (int i = 0; i < m; i++) {
+        int a = prerequisites[i][0], b = prerequisites[i][1];   // b -> a
+        eTo[i] = a;
+        eNext[i] = eHead[b];
+        eHead[b] = i;
+        indeg[a]++;
+    }
+    int* q = malloc(sizeof(int) * numCourses);
+    int qh = 0, qt = 0, taken = 0;
+    for (int i = 0; i < numCourses; i++)
+        if (indeg[i] == 0) q[qt++] = i;
+    while (qh < qt) {
+        int cur = q[qh++];
+        taken++;
+        for (int e = eHead[cur]; e != -1; e = eNext[e]) {
+            if (--indeg[eTo[e]] == 0) q[qt++] = eTo[e];
+        }
+    }
+    return taken == numCourses;              // 全部出队 <=> 无环
+}
+// 时间复杂度 O(V + E)，空间 O(V + E)。
+
+###0208
+// LeetCode C 已提供结构：typedef struct { struct Trie* children[26]; bool isEnd; } Trie;
+// 思路：26 叉前缀树，路径即前缀，isEnd 标记单词结尾。
+#include <stdbool.h>
+#include <stdlib.h>
+
+Trie* trieCreate() {
+    return calloc(1, sizeof(Trie));          // calloc 全零即"空树"
+}
+
+void trieInsert(Trie* obj, char* word) {
+    Trie* node = obj;
+    for (char* p = word; *p; p++) {
+        int idx = *p - 'a';
+        if (!node->children[idx]) node->children[idx] = trieCreate();
+        node = node->children[idx];
+    }
+    node->isEnd = true;
+}
+
+static Trie* trieFind(Trie* obj, char* s) {  // 沿字符向下走，返回终点或 NULL
+    Trie* node = obj;
+    for (char* p = s; *p; p++) {
+        node = node->children[*p - 'a'];
+        if (!node) return NULL;
+    }
+    return node;
+}
+
+bool trieSearch(Trie* obj, char* word) {
+    Trie* node = trieFind(obj, word);
+    return node && node->isEnd;              // 必须是完整单词
+}
+
+bool trieStartsWith(Trie* obj, char* prefix) {
+    return trieFind(obj, prefix) != NULL;    // 有路径就算前缀
+}
+
+void trieFree(Trie* obj) {
+    if (!obj) return;
+    for (int i = 0; i < 26; i++) trieFree(obj->children[i]);
+    free(obj);
+}
+// 单次操作 O(L)，L 为字符串长度。
+
+###0046
+// 思路：回溯 + used 标记。n <= 6，排列最多 720 个，按上限分配结果数组。
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+static int** g_res;
+static int* g_cols;
+static int g_cnt, g_n;
+static int* g_path;
+static bool* g_used;
+
+static void backtrack(int* nums, int depth) {
+    if (depth == g_n) {
+        g_res[g_cnt] = malloc(sizeof(int) * g_n);
+        memcpy(g_res[g_cnt], g_path, sizeof(int) * g_n);
+        g_cols[g_cnt] = g_n;
+        g_cnt++;
+        return;
+    }
+    for (int i = 0; i < g_n; i++) {
+        if (g_used[i]) continue;
+        g_used[i] = true;                    // 做选择
+        g_path[depth] = nums[i];
+        backtrack(nums, depth + 1);
+        g_used[i] = false;                   // 撤销
+    }
+}
+
+int** permute(int* nums, int numsSize, int* returnSize, int** returnColumnSizes) {
+    g_n = numsSize;
+    g_cnt = 0;
+    int maxRows = 1;
+    for (int i = 2; i <= numsSize; i++) maxRows *= i;   // n! 上限
+    g_res = malloc(sizeof(int*) * maxRows);
+    g_cols = malloc(sizeof(int) * maxRows);
+    g_path = malloc(sizeof(int) * numsSize);
+    g_used = calloc(numsSize, sizeof(bool));
+    backtrack(nums, 0);
+    *returnSize = g_cnt;
+    *returnColumnSizes = g_cols;
+    return g_res;
+}
+// 时间复杂度 O(n·n!)，空间 O(n)。
+
+###0078
+// 思路：回溯 + start 控制只向后选（天然去重），进入函数即收集当前子集。
+// 子集总数最多 2^10 = 1024。
+#include <stdlib.h>
+#include <string.h>
+
+static int** g_res;
+static int* g_cols;
+static int g_cnt;
+static int* g_path;
+static int g_pathLen;
+static int* g_nums;
+
+static void backtrack(int start, int n) {
+    g_res[g_cnt] = malloc(sizeof(int) * (g_pathLen ? g_pathLen : 1));
+    memcpy(g_res[g_cnt], g_path, sizeof(int) * g_pathLen);
+    g_cols[g_cnt] = g_pathLen;
+    g_cnt++;
+    for (int i = start; i < n; i++) {
+        g_path[g_pathLen++] = g_nums[i];
+        backtrack(i + 1, n);
+        g_pathLen--;
+    }
+}
+
+int** subsets(int* nums, int numsSize, int* returnSize, int** returnColumnSizes) {
+    g_res = malloc(sizeof(int*) * (1 << numsSize));
+    g_cols = malloc(sizeof(int) * (1 << numsSize));
+    g_path = malloc(sizeof(int) * numsSize);
+    g_pathLen = 0;
+    g_cnt = 0;
+    g_nums = nums;
+    backtrack(0, numsSize);
+    *returnSize = g_cnt;
+    *returnColumnSizes = g_cols;
+    return g_res;
+}
+// 时间复杂度 O(n·2^n)，空间 O(n)。
+
+###0017
+// 思路：回溯逐位选字母；digits 长度 <= 4，最多 4^4 = 256 个组合。
+// 空输入返回 0 行。数字 0/1 不对应字母（题目保证 digits 只含 2-9）。
+#include <stdlib.h>
+#include <string.h>
+
+static const char* MAP[10] = {"", "", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz"};
+static char** g_res;
+static int g_cnt;
+static char* g_path;
+
+static void backtrack(char* digits, int depth, int total) {
+    if (depth == total) {
+        g_res[g_cnt] = malloc(total + 1);
+        memcpy(g_res[g_cnt], g_path, total);
+        g_res[g_cnt][total] = '\0';
+        g_cnt++;
+        return;
+    }
+    const char* letters = MAP[digits[depth] - '0'];
+    for (const char* p = letters; *p; p++) {
+        g_path[depth] = *p;
+        backtrack(digits, depth + 1, total);
+    }
+}
+
+char** letterCombinations(char* digits, int* returnSize) {
+    int total = strlen(digits);
+    int maxRows = 1;
+    for (int i = 0; i < total; i++) maxRows *= 4;
+    g_res = malloc(sizeof(char*) * (maxRows ? maxRows : 1));
+    g_path = malloc(total + 1);
+    g_cnt = 0;
+    if (total > 0) backtrack(digits, 0, total);
+    *returnSize = g_cnt;
+    return g_res;
+}
+// 时间复杂度 O(4^n·n)，空间 O(n)。
+
+###0039
+// 思路：排序 + 回溯 + 剪枝；递归传 i（可重复选当前数）。结果组数动态扩容。
+#include <stdlib.h>
+
+static int** g_res;
+static int* g_cols;
+static int g_cnt, g_cap;
+static int* g_path;
+static int g_pathLen;
+
+static void pushRow(void) {
+    if (g_cnt == g_cap) {                    // 扩容
+        g_cap *= 2;
+        g_res = realloc(g_res, sizeof(int*) * g_cap);
+        g_cols = realloc(g_cols, sizeof(int) * g_cap);
+    }
+    g_res[g_cnt] = malloc(sizeof(int) * g_pathLen);
+    for (int i = 0; i < g_pathLen; i++) g_res[g_cnt][i] = g_path[i];
+    g_cols[g_cnt] = g_pathLen;
+    g_cnt++;
+}
+
+static void backtrack(int* cand, int candSize, int remain, int start) {
+    if (remain == 0) {
+        pushRow();
+        return;
+    }
+    for (int i = start; i < candSize; i++) {
+        if (cand[i] > remain) break;         // 已排序，后面更大，剪枝
+        g_path[g_pathLen++] = cand[i];
+        backtrack(cand, candSize, remain - cand[i], i);   // i 不变：可重复选
+        g_pathLen--;
+    }
+}
+
+static int cmpInt(const void* a, const void* b) {
+    int x = *(const int*)a, y = *(const int*)b;
+    return (x > y) - (x < y);
+}
+
+int** combinationSum(int* candidates, int candidatesSize, int target,
+                     int* returnSize, int** returnColumnSizes) {
+    qsort(candidates, candidatesSize, sizeof(int), cmpInt);
+    g_cap = 64;
+    g_cnt = 0;
+    g_pathLen = 0;
+    g_res = malloc(sizeof(int*) * g_cap);
+    g_cols = malloc(sizeof(int) * g_cap);
+    g_path = malloc(sizeof(int) * target);
+    backtrack(candidates, candidatesSize, target, 0);
+    *returnSize = g_cnt;
+    *returnColumnSizes = g_cols;
+    return g_res;
+}
+// 时间复杂度 O(n·2^target)（上界），空间 O(target)。
+
+###0022
+// 思路：回溯。左括号数 < n 可加左；右括号数 < 已用左括号数才可加右。
+// n <= 8，结果最多卡特兰数 C(8) = 1430 个。
+#include <stdlib.h>
+#include <string.h>
+
+static char** g_res;
+static int g_cnt;
+static char g_path[20];
+
+static void backtrack(int n, int pos, int open, int close) {
+    if (pos == 2 * n) {
+        g_res[g_cnt] = malloc(2 * n + 1);
+        memcpy(g_res[g_cnt], g_path, 2 * n);
+        g_res[g_cnt][2 * n] = '\0';
+        g_cnt++;
+        return;
+    }
+    if (open < n) {                          // 还能放左括号
+        g_path[pos] = '(';
+        backtrack(n, pos + 1, open + 1, close);
+    }
+    if (close < open) {                      // 右括号不能超过左括号
+        g_path[pos] = ')';
+        backtrack(n, pos + 1, open, close + 1);
+    }
+}
+
+char** generateParenthesis(int n, int* returnSize) {
+    g_res = malloc(sizeof(char*) * 1500);
+    g_cnt = 0;
+    backtrack(n, 0, 0, 0);
+    *returnSize = g_cnt;
+    return g_res;
+}
+// 时间复杂度 O(4^n / sqrt(n))（卡特兰数），空间 O(n)。
+
+###0079
+// 思路：从每个格子尝试 DFS 匹配单词，'#' 临时标记占用，回溯还原。
+#include <stdbool.h>
+#include <string.h>
+
+static int g_m, g_n;
+static const char* g_word;
+
+static bool dfs(char** board, int i, int j, int k) {
+    if (i < 0 || i >= g_m || j < 0 || j >= g_n || board[i][j] != g_word[k])
+        return false;                        // 越界或字符不匹配
+    if (g_word[k + 1] == '\0') return true;  // 最后一个字符也匹配了
+    char saved = board[i][j];
+    board[i][j] = '#';                       // 标记占用
+    bool found = dfs(board, i + 1, j, k + 1) || dfs(board, i - 1, j, k + 1)
+              || dfs(board, i, j + 1, k + 1) || dfs(board, i, j - 1, k + 1);
+    board[i][j] = saved;                     // 回溯还原
+    return found;
+}
+
+bool exist(char** board, int boardSize, int* boardColSize, char* word) {
+    g_m = boardSize;
+    g_n = boardColSize[0];
+    g_word = word;
+    for (int i = 0; i < g_m; i++)
+        for (int j = 0; j < g_n; j++)
+            if (dfs(board, i, j, 0)) return true;
+    return false;
+}
+// 时间复杂度 O(mn·3^L)，空间 O(L)。

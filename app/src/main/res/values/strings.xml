@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">力扣热题100</string>
+    <string name="toolbar_subtitle">LeetCode Hot 100 · Java 题解</string>
+    <string name="section_desc">题目描述</string>
+    <string name="section_answer">参考答案</string>
+    <string name="section_explain">思路解析</string>
+    <string name="btn_show_answer">点击查看答案</string>
+    <string name="loading">题库加载中…</string>
+    <string name="missing_content">（内容缺失）</string>
+</resources>

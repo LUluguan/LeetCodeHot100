@@ -1,0 +1,20 @@
+# Gradle
+.gradle/
+build/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# 机器相关配置（SDK 路径因人而异）
+local.properties
+
+# Android 打包产物
+captures/
+.cxx/
+
+# 系统文件
+.DS_Store
+Thumbs.db

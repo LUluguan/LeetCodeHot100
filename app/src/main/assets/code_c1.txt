@@ -1,0 +1,534 @@
+###0001
+// 思路：C 没有内置哈希表，这里手写一个开放寻址哈希表（数值 -> 下标），
+// 核心逻辑与 Java 版一致：边遍历边查询 target - x 是否出现过。
+#include <string.h>
+
+#define HASH_SIZE 20011            // 取大于数据规模的质数，减少冲突
+static long slotVal[HASH_SIZE];    // 槽位存的数值
+static int slotIdx[HASH_SIZE];     // 槽位存的数组下标 + 1（0 表示空槽）
+
+static int hashFind(long key) {    // 返回下标；不存在返回 -1
+    int h = (int)(((key % HASH_SIZE) + HASH_SIZE) % HASH_SIZE);
+    while (slotIdx[h] != 0) {
+        if (slotVal[h] == key) return slotIdx[h] - 1;
+        h = (h + 1) % HASH_SIZE;   // 线性探测
+    }
+    return -1;
+}
+
+static void hashInsert(long key, int idx) {
+    int h = (int)(((key % HASH_SIZE) + HASH_SIZE) % HASH_SIZE);
+    while (slotIdx[h] != 0) h = (h + 1) % HASH_SIZE;
+    slotVal[h] = key;
+    slotIdx[h] = idx + 1;
+}
+
+int* twoSum(int* nums, int numsSize, int target, int* returnSize) {
+    memset(slotVal, 0, sizeof(slotVal));   // 多组测试用例之间要清空静态表
+    memset(slotIdx, 0, sizeof(slotIdx));
+    int* res = (int*)malloc(2 * sizeof(int));
+    *returnSize = 0;
+    for (int i = 0; i < numsSize; i++) {
+        int j = hashFind((long)target - nums[i]);   // 先查配对的数
+        if (j >= 0) {
+            res[0] = j;
+            res[1] = i;
+            *returnSize = 2;
+            return res;
+        }
+        hashInsert(nums[i], i);                     // 再插入当前数
+    }
+    return res;
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0049
+// 思路：为每个单词生成"字母计数签名"（26 个字母的出现次数），
+// 签名相同的单词是异位词。把 (签名, 下标) 排序后，签名相同的就是连续一段。
+// LeetCode C 返回 char***，returnColumnSizes 记录每组的单词个数。
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    char sig[128];   // 26 个字母各输出 "次数,"，最长约 104 字符
+    int idx;         // 原字符串下标
+} Item;
+
+static int cmpItem(const void* a, const void* b) {
+    int r = strcmp(((const Item*)a)->sig, ((const Item*)b)->sig);
+    return r != 0 ? r : ((const Item*)a)->idx - ((const Item*)b)->idx;
+}
+
+char*** groupAnagrams(char** strs, int strsSize, int* returnSize, int** returnColumnSizes) {
+    Item* items = malloc(sizeof(Item) * strsSize);
+    for (int i = 0; i < strsSize; i++) {
+        int cnt[26] = {0};
+        for (char* p = strs[i]; *p; p++) cnt[*p - 'a']++;
+        int pos = 0;
+        for (int j = 0; j < 26; j++)
+            pos += sprintf(items[i].sig + pos, "%d,", cnt[j]);  // 生成签名
+        items[i].idx = i;
+    }
+    qsort(items, strsSize, sizeof(Item), cmpItem);
+
+    char*** res = malloc(sizeof(char**) * strsSize);
+    int* cols = malloc(sizeof(int) * strsSize);
+    int g = 0, i = 0;
+    while (i < strsSize) {
+        int j = i;
+        while (j < strsSize && strcmp(items[j].sig, items[i].sig) == 0) j++;
+        cols[g] = j - i;
+        res[g] = malloc(sizeof(char*) * (j - i));
+        for (int k = i; k < j; k++) res[g][k - i] = strs[items[k].idx];
+        g++;
+        i = j;
+    }
+    *returnSize = g;
+    *returnColumnSizes = cols;
+    return res;
+}
+// 时间复杂度 O(n·k + n log n)，空间 O(n·k)。
+
+###0128
+// 思路：排序后扫描，遇到"断点"（与前一个数不相邻）重新计数。
+// 排序版为 O(n log n)；O(n) 哈希写法思路见 Java/Python 题解。
+#include <stdlib.h>
+
+static int cmpInt(const void* a, const void* b) {
+    int x = *(const int*)a, y = *(const int*)b;
+    return (x > y) - (x < y);          // 写成相减可能溢出，用比较返回
+}
+
+int longestConsecutive(int* nums, int numsSize) {
+    if (numsSize == 0) return 0;
+    qsort(nums, numsSize, sizeof(int), cmpInt);
+    int best = 1, cur = 1;
+    for (int i = 1; i < numsSize; i++) {
+        if (nums[i] == nums[i - 1]) continue;          // 重复数跳过
+        if (nums[i] == nums[i - 1] + 1) cur++;         // 连续，延长
+        else cur = 1;                                  // 断开，重新开始
+        if (cur > best) best = cur;
+    }
+    return best;
+}
+// 时间复杂度 O(n log n)，空间 O(log n)。
+
+###0283
+// 思路：快慢双指针，[0, slow) 始终是非零且相对有序的前缀，与 Java 版一致。
+void moveZeroes(int* nums, int numsSize) {
+    int slow = 0;                          // 下一个非零数应放的位置
+    for (int fast = 0; fast < numsSize; fast++) {
+        if (nums[fast] != 0) {
+            int t = nums[slow];
+            nums[slow] = nums[fast];
+            nums[fast] = t;
+            slow++;
+        }
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0011
+// 思路：对撞双指针，每次移动较矮的一侧（正确性证明见 Java 版解析）。
+int maxArea(int* height, int heightSize) {
+    int left = 0, right = heightSize - 1;
+    int best = 0;
+    while (left < right) {
+        int h = height[left] < height[right] ? height[left] : height[right];
+        int area = h * (right - left);
+        if (area > best) best = area;
+        if (height[left] < height[right]) left++;
+        else right--;
+    }
+    return best;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0015
+// 思路：排序 + 固定 i + 对撞双指针，去重与剪枝逻辑与 Java 版一致。
+// 结果组数无法预先精确估计，用 realloc 动态扩容。
+#include <stdlib.h>
+
+static int cmpInt(const void* a, const void* b) {
+    int x = *(const int*)a, y = *(const int*)b;
+    return (x > y) - (x < y);
+}
+
+int** threeSum(int* nums, int numsSize, int* returnSize, int** returnColumnSizes) {
+    qsort(nums, numsSize, sizeof(int), cmpInt);
+    int cap = 1024, cnt = 0;
+    int** res = malloc(sizeof(int*) * cap);
+    int* cols = malloc(sizeof(int) * cap);
+    for (int i = 0; i < numsSize - 2; i++) {
+        if (i > 0 && nums[i] == nums[i - 1]) continue;       // 跳过重复的固定数
+        if (nums[i] + nums[i + 1] + nums[i + 2] > 0) break;  // 最小三数已 > 0，无解
+        int left = i + 1, right = numsSize - 1;
+        while (left < right) {
+            int sum = nums[i] + nums[left] + nums[right];
+            if (sum < 0) {
+                left++;
+            } else if (sum > 0) {
+                right--;
+            } else {
+                if (cnt == cap) {                // 结果满则扩容
+                    cap *= 2;
+                    res = realloc(res, sizeof(int*) * cap);
+                    cols = realloc(cols, sizeof(int) * cap);
+                }
+                res[cnt] = malloc(3 * sizeof(int));
+                res[cnt][0] = nums[i];
+                res[cnt][1] = nums[left];
+                res[cnt][2] = nums[right];
+                cols[cnt] = 3;
+                cnt++;
+                while (left < right && nums[left] == nums[left + 1]) left++;
+                while (left < right && nums[right] == nums[right - 1]) right--;
+                left++;
+                right--;
+            }
+        }
+    }
+    *returnSize = cnt;
+    *returnColumnSizes = cols;
+    return res;
+}
+// 时间复杂度 O(n^2)，空间 O(log n)（不计输出）。
+
+###0042
+// 思路：双指针。位置 i 的水位由较矮一侧的最大高度决定，按矮侧逐格结算。
+int trap(int* height, int heightSize) {
+    int left = 0, right = heightSize - 1;
+    int leftMax = 0, rightMax = 0, water = 0;
+    while (left < right) {
+        if (height[left] < height[right]) {          // 左侧较矮
+            if (height[left] >= leftMax) leftMax = height[left];
+            else water += leftMax - height[left];    // 结算位置 left
+            left++;
+        } else {
+            if (height[right] >= rightMax) rightMax = height[right];
+            else water += rightMax - height[right];
+            right--;
+        }
+    }
+    return water;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0003
+// 思路：滑动窗口。pos[c] 记录字符 c 最后出现的下一位（1 基，0 表示未出现），
+// right 遇到重复字符时，left 直接跳到重复字符上一次出现的下一位。
+int lengthOfLongestSubstring(char* s) {
+    int pos[256] = {0};                        // 局部数组，每次调用自动清零
+    int left = 0, best = 0;
+    for (int right = 0; s[right]; right++) {
+        unsigned char c = (unsigned char)s[right];
+        if (pos[c] > left) left = pos[c];      // 重复则收缩左边界
+        pos[c] = right + 1;
+        if (right - left + 1 > best) best = right - left + 1;
+    }
+    return best;
+}
+// 时间复杂度 O(n)，空间 O(字符集)。
+
+###0438
+// 思路：定长滑动窗口 + 26 计数数组，memcmp 比较计数是否与 p 完全一致。
+#include <string.h>
+
+int* findAnagrams(char* s, char* p, int* returnSize) {
+    int cntP[26] = {0}, cntW[26] = {0};
+    int m = strlen(s), n = strlen(p);
+    int* res = malloc(sizeof(int) * m);
+    int cnt = 0;
+    if (m < n) { *returnSize = 0; return res; }
+    for (int i = 0; i < n; i++) {
+        cntP[p[i] - 'a']++;
+        cntW[s[i] - 'a']++;
+    }
+    if (memcmp(cntP, cntW, sizeof(cntP)) == 0) res[cnt++] = 0;
+    for (int i = n; i < m; i++) {
+        cntW[s[i] - 'a']++;                    // 右端进一个字符
+        cntW[s[i - n] - 'a']--;                // 左端出一个字符
+        if (memcmp(cntP, cntW, sizeof(cntP)) == 0) res[cnt++] = i - n + 1;
+    }
+    *returnSize = cnt;
+    return res;
+}
+// 时间复杂度 O(26n)，空间 O(26)。
+
+###0560
+// 思路：前缀和 + 手写哈希表（前缀和 -> 出现次数），逻辑与 Java 版一致：
+// 当前前缀和为 pre 时，答案累加"pre - k 出现过的次数"。
+#include <string.h>
+
+#define HASH_SIZE 40009
+static long slotVal[HASH_SIZE];    // 前缀和的值
+static int slotCnt[HASH_SIZE];     // 出现次数（0 表示空槽）
+
+static int slotOf(long key) {      // 返回 key 所在/应插入的槽位
+    int h = (int)(((key % HASH_SIZE) + HASH_SIZE) % HASH_SIZE);
+    while (slotCnt[h] != 0 && slotVal[h] != key) h = (h + 1) % HASH_SIZE;
+    return h;
+}
+static int hashGet(long key) {
+    int h = slotOf(key);
+    return (slotCnt[h] != 0 && slotVal[h] == key) ? slotCnt[h] : 0;
+}
+static void hashAdd(long key) {
+    int h = slotOf(key);
+    slotVal[h] = key;
+    slotCnt[h]++;
+}
+
+int subarraySum(int* nums, int numsSize, int k) {
+    memset(slotVal, 0, sizeof(slotVal));
+    memset(slotCnt, 0, sizeof(slotCnt));
+    hashAdd(0);                            // 空前缀：支持"从下标 0 开始"的子数组
+    long pre = 0;
+    int ans = 0;
+    for (int i = 0; i < numsSize; i++) {
+        pre += nums[i];
+        ans += hashGet(pre - k);           // 必须先查询
+        hashAdd(pre);                      // 再记录当前前缀和
+    }
+    return ans;
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0239
+// 思路：单调递减队列（数组模拟，存下标），队头即当前窗口最大值。
+int* maxSlidingWindow(int* nums, int numsSize, int k, int* returnSize) {
+    int* dq = malloc(sizeof(int) * numsSize);
+    int head = 0, tail = 0;                // 队列区间 [head, tail)
+    int* res = malloc(sizeof(int) * (numsSize - k + 1));
+    *returnSize = 0;
+    for (int i = 0; i < numsSize; i++) {
+        if (head < tail && dq[head] <= i - k) head++;        // 队头滑出窗口
+        while (head < tail && nums[dq[tail - 1]] <= nums[i]) // 弹出不可能再当最大值的
+            tail--;
+        dq[tail++] = i;
+        if (i >= k - 1) res[(*returnSize)++] = nums[dq[head]];
+    }
+    return res;
+}
+// 时间复杂度 O(n)，空间 O(k)。
+
+###0076
+// 思路：滑动窗口。need[] 记录 t 的需求，win[] 记录窗口计数，
+// valid 记录"数量已达标"的字符种类数，与 Java 版逻辑一致。
+#include <limits.h>
+#include <stdlib.h>
+#include <string.h>
+
+char* minWindow(char* s, char* t) {
+    int need[128] = {0}, win[128] = {0};
+    int kinds = 0;                         // t 中不同字符的种类数
+    for (char* p = t; *p; p++)
+        if (need[(unsigned char)*p]++ == 0) kinds++;
+
+    int m = strlen(s), valid = 0, left = 0;
+    int bestLen = INT_MAX, bestStart = 0;
+    for (int right = 0; right < m; right++) {
+        unsigned char c = (unsigned char)s[right];
+        if (need[c] > 0) {
+            win[c]++;
+            if (win[c] == need[c]) valid++;
+        }
+        while (valid == kinds) {           // 窗口已覆盖 t，尝试收缩
+            if (right - left + 1 < bestLen) {
+                bestLen = right - left + 1;
+                bestStart = left;
+            }
+            unsigned char d = (unsigned char)s[left];
+            if (need[d] > 0) {
+                if (win[d] == need[d]) valid--;
+                win[d]--;
+            }
+            left++;
+        }
+    }
+    char* res;
+    if (bestLen == INT_MAX) {
+        res = malloc(1);
+        res[0] = '\0';
+        return res;
+    }
+    res = malloc(bestLen + 1);
+    memcpy(res, s + bestStart, bestLen);
+    res[bestLen] = '\0';
+    return res;
+}
+// 时间复杂度 O(|s| + |t|)，空间 O(128)。
+
+###0053
+// 思路：Kadane 算法，f(i) = max(nums[i], f(i-1) + nums[i])。
+#include <limits.h>
+
+int maxSubArray(int* nums, int numsSize) {
+    int cur = 0, best = INT_MIN;
+    for (int i = 0; i < numsSize; i++) {
+        cur = nums[i] > cur + nums[i] ? nums[i] : cur + nums[i];
+        if (cur > best) best = cur;
+    }
+    return best;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0056
+// 思路：按左端点排序后线性合并。对"指针数组"排序避免移动原始区间，
+// 输出的每个新区间单独 malloc，不修改输入。
+#include <stdlib.h>
+
+static int cmpInterval(const void* a, const void* b) {
+    const int* pa = *(const int**)a;
+    const int* pb = *(const int**)b;
+    if (pa[0] != pb[0]) return (pa[0] > pb[0]) - (pa[0] < pb[0]);
+    return (pa[1] > pb[1]) - (pa[1] < pb[1]);
+}
+
+int** merge(int** intervals, int intervalsSize, int* intervalsColSize,
+            int* returnSize, int** returnColumnSizes) {
+    qsort(intervals, intervalsSize, sizeof(int*), cmpInterval);
+    int** res = malloc(sizeof(int*) * intervalsSize);
+    int* cols = malloc(sizeof(int) * intervalsSize);
+    int cnt = 0;
+    for (int i = 0; i < intervalsSize; i++) {
+        if (cnt > 0 && intervals[i][0] <= res[cnt - 1][1]) {
+            // 与上一段重叠：扩展右端点
+            if (intervals[i][1] > res[cnt - 1][1]) res[cnt - 1][1] = intervals[i][1];
+        } else {
+            res[cnt] = malloc(2 * sizeof(int));
+            res[cnt][0] = intervals[i][0];
+            res[cnt][1] = intervals[i][1];
+            cols[cnt] = 2;
+            cnt++;
+        }
+    }
+    *returnSize = cnt;
+    *returnColumnSizes = cols;
+    return res;
+}
+// 时间复杂度 O(n log n)，空间 O(n)（不计输出）。
+
+###0189
+// 思路：三次翻转（整体、前 k 个、后 n-k 个），O(1) 空间，与 Java 版一致。
+static void reverse(int* nums, int l, int r) {
+    while (l < r) {
+        int t = nums[l];
+        nums[l] = nums[r];
+        nums[r] = t;
+        l++;
+        r--;
+    }
+}
+
+void rotate(int* nums, int numsSize, int k) {
+    k %= numsSize;
+    reverse(nums, 0, numsSize - 1);
+    reverse(nums, 0, k - 1);
+    reverse(nums, k, numsSize - 1);
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0238
+// 思路：前缀乘积数组 + 滚动后缀乘积，answer[i] = 左侧乘积 × 右侧乘积。
+int* productExceptSelf(int* nums, int numsSize, int* returnSize) {
+    int* res = malloc(sizeof(int) * numsSize);
+    *returnSize = numsSize;
+    res[0] = 1;
+    for (int i = 1; i < numsSize; i++)
+        res[i] = res[i - 1] * nums[i - 1];   // 左侧全部元素的乘积
+    int suffix = 1;                          // 右侧元素的滚动乘积
+    for (int i = numsSize - 1; i >= 0; i--) {
+        res[i] *= suffix;
+        suffix *= nums[i];
+    }
+    return res;
+}
+// 时间复杂度 O(n)，空间 O(1)（输出数组不计）。
+
+###0041
+// 思路：原地哈希——值 x（1..n）换到下标 x-1，第一个没归位的位置即答案。
+int firstMissingPositive(int* nums, int numsSize) {
+    for (int i = 0; i < numsSize; i++) {
+        while (nums[i] >= 1 && nums[i] <= numsSize
+                && nums[nums[i] - 1] != nums[i]) {
+            int t = nums[nums[i] - 1];       // 先取目标位置的值，再交换
+            nums[nums[i] - 1] = nums[i];
+            nums[i] = t;
+        }
+    }
+    for (int i = 0; i < numsSize; i++)
+        if (nums[i] != i + 1) return i + 1;
+    return numsSize + 1;                     // 1..n 全部在，答案是 n+1
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0073
+// 思路：第一行/第一列作标记数组，O(1) 额外空间，与 Java 版一致。
+void setZeroes(int** matrix, int matrixSize, int* matrixColSize) {
+    int m = matrixSize, n = matrixColSize[0];
+    int firstRow = 0, firstCol = 0;
+    for (int j = 0; j < n; j++)
+        if (matrix[0][j] == 0) firstRow = 1;
+    for (int i = 0; i < m; i++)
+        if (matrix[i][0] == 0) firstCol = 1;
+    for (int i = 1; i < m; i++)
+        for (int j = 1; j < n; j++)
+            if (matrix[i][j] == 0) {
+                matrix[i][0] = 0;                // 标记第 i 行
+                matrix[0][j] = 0;                // 标记第 j 列
+            }
+    for (int i = 1; i < m; i++)
+        for (int j = 1; j < n; j++)
+            if (matrix[i][0] == 0 || matrix[0][j] == 0) matrix[i][j] = 0;
+    if (firstRow)
+        for (int j = 0; j < n; j++) matrix[0][j] = 0;
+    if (firstCol)
+        for (int i = 0; i < m; i++) matrix[i][0] = 0;
+}
+// 时间复杂度 O(mn)，空间 O(1)。
+
+###0054
+// 思路：四边界收缩模拟（右→下→左→上），注意单行/单列时防重复遍历。
+#include <stdlib.h>
+
+int* spiralOrder(int** matrix, int matrixSize, int* matrixColSize, int* returnSize) {
+    int m = matrixSize, n = matrixColSize[0];
+    int* res = malloc(sizeof(int) * m * n);
+    *returnSize = 0;
+    int top = 0, bottom = m - 1, left = 0, right = n - 1;
+    while (top <= bottom && left <= right) {
+        for (int j = left; j <= right; j++) res[(*returnSize)++] = matrix[top][j];
+        for (int i = top + 1; i <= bottom; i++) res[(*returnSize)++] = matrix[i][right];
+        if (top < bottom)
+            for (int j = right - 1; j >= left; j--) res[(*returnSize)++] = matrix[bottom][j];
+        if (left < right)
+            for (int i = bottom - 1; i > top; i--) res[(*returnSize)++] = matrix[i][left];
+        top++;
+        bottom--;
+        left++;
+        right--;
+    }
+    return res;
+}
+// 时间复杂度 O(mn)，空间 O(1)（不计输出）。
+
+###0048
+// 思路：顺时针旋转 90° = 转置 + 每行左右翻转，与 Java 版一致。
+void rotate(int** matrix, int matrixSize, int* matrixColSize) {
+    int n = matrixSize;
+    for (int i = 0; i < n; i++)              // 转置（只走上三角）
+        for (int j = i + 1; j < n; j++) {
+            int t = matrix[i][j];
+            matrix[i][j] = matrix[j][i];
+            matrix[j][i] = t;
+        }
+    for (int i = 0; i < n; i++)              // 每行左右翻转
+        for (int j = 0; j < n / 2; j++) {
+            int t = matrix[i][j];
+            matrix[i][j] = matrix[i][n - 1 - j];
+            matrix[i][n - 1 - j] = t;
+        }
+}
+// 时间复杂度 O(n^2)，空间 O(1)。

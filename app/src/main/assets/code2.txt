@@ -1,0 +1,550 @@
+###0240
+// 思路：从矩阵右上角出发。当前值大于 target 就左移（排除该列），
+// 小于 target 就下移（排除该行）。每次移动都排除一行或一列，最多 2n 步。
+class Solution {
+    public boolean searchMatrix(int[][] matrix, int target) {
+        int i = 0, j = matrix[0].length - 1;      // 从右上角开始
+        while (i < matrix.length && j >= 0) {
+            if (matrix[i][j] == target) {
+                return true;
+            } else if (matrix[i][j] > target) {
+                j--;                              // 该列下面更大，排除当前列
+            } else {
+                i++;                              // 该行左边更小，排除当前行
+            }
+        }
+        return false;
+    }
+}
+// 时间复杂度 O(m + n)，空间复杂度 O(1)。
+
+###0160
+// 思路：双指针浪漫相遇法。指针 pA 走完 A 后从 B 出发，pB 走完 B 后从 A 出发，
+// 两者走过的总长度相同（a + c + b 与 b + c + a），若相交必在交点相遇，否则同时到达 null。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+        if (headA == null || headB == null) return null;
+        ListNode pA = headA, pB = headB;
+        while (pA != pB) {
+            // 走到各自末尾就切换到另一条链，最多走 a+b+c 步
+            pA = (pA == null) ? headB : pA.next;
+            pB = (pB == null) ? headA : pB.next;
+        }
+        return pA;                                // 相交返回交点，不相交两者同时为 null
+    }
+}
+// 时间复杂度 O(m + n)，空间复杂度 O(1)。
+
+###0206
+// 思路：迭代三指针。prev 指向已反转部分的头，cur 是当前节点，
+// 每次先把 next 存下来，再把 cur 反指 prev，然后整体右移。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+class Solution {
+    public ListNode reverseList(ListNode head) {
+        ListNode prev = null;
+        ListNode cur = head;
+        while (cur != null) {
+            ListNode next = cur.next;             // 先保存后面的链
+            cur.next = prev;                      // 反转当前指针
+            prev = cur;                           // prev 前进
+            cur = next;                           // cur 前进
+        }
+        return prev;                              // 新的头节点
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+// 递归写法：reverse(head.next) 返回新头后，head.next.next = head; head.next = null;（空间 O(n)）。
+
+###0234
+// 思路：O(1) 空间做法。快慢指针找中点 -> 反转后半段 -> 逐个比较 -> （可选）还原。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+class Solution {
+    public boolean isPalindrome(ListNode head) {
+        // 1) 快慢指针找到链表中点（slow 停在前半段末尾）
+        ListNode slow = head, fast = head;
+        while (fast.next != null && fast.next.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+        }
+        // 2) 反转后半段
+        ListNode second = reverseList(slow.next);
+        // 3) 前半段与反转后的后半段逐节点比较
+        ListNode p1 = head, p2 = second;
+        boolean ok = true;
+        while (p2 != null) {
+            if (p1.val != p2.val) {
+                ok = false;
+                break;
+            }
+            p1 = p1.next;
+            p2 = p2.next;
+        }
+        return ok;
+    }
+
+    private ListNode reverseList(ListNode head) {
+        ListNode prev = null, cur = head;
+        while (cur != null) {
+            ListNode next = cur.next;
+            cur.next = prev;
+            prev = cur;
+            cur = next;
+        }
+        return prev;
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+
+###0141
+// 思路：Floyd 判圈。快指针每次走两步，慢指针每次走一步，
+// 若有环二者必然在环内相遇；快指针到达 null 则无环。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+public class Solution {
+    public boolean hasCycle(ListNode head) {
+        ListNode slow = head, fast = head;
+        while (fast != null && fast.next != null) {
+            slow = slow.next;                     // 一次一步
+            fast = fast.next.next;                // 一次两步
+            if (slow == fast) return true;        // 在环内相遇
+        }
+        return false;                             // fast 走到头，无环
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+
+###0142
+// 思路：Floyd 判圈两阶段。
+// 阶段一：快慢指针在环内相遇。
+// 阶段二：一个指针回到头部，两个指针同速前进，再次相遇处即入环口。
+// 数学证明：头到入环口距离 a，入环口到相遇点距离 b，环长 c，
+// 相遇时慢指针走了 a+b，快指针走了 a+b+kc，故 a = (k-1)c + (c-b)。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+public class Solution {
+    public ListNode detectCycle(ListNode head) {
+        ListNode slow = head, fast = head;
+        while (fast != null && fast.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+            if (slow == fast) {                   // 阶段一：相遇
+                ListNode p = head;
+                while (p != slow) {               // 阶段二：找入环口
+                    p = p.next;
+                    slow = slow.next;
+                }
+                return p;
+            }
+        }
+        return null;                              // 无环
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+
+###0021
+// 思路：哑节点 + 逐个比较拼接。每次取两条链中较小的头接到结果尾部。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+class Solution {
+    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {
+        ListNode dummy = new ListNode(0);         // 哑节点简化头部处理
+        ListNode cur = dummy;
+        while (l1 != null && l2 != null) {
+            if (l1.val <= l2.val) {
+                cur.next = l1;
+                l1 = l1.next;
+            } else {
+                cur.next = l2;
+                l2 = l2.next;
+            }
+            cur = cur.next;
+        }
+        cur.next = (l1 != null) ? l1 : l2;        // 剩下的直接接上
+        return dummy.next;
+    }
+}
+// 时间复杂度 O(m + n)，空间复杂度 O(1)。
+
+###0002
+// 思路：模拟竖式加法。同步遍历两条链，加上进位，逐位生成新节点；
+// 任一链走完后补 0，最后若还有进位要额外加一个节点。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+class Solution {
+    public ListNode addTwoNumbers(ListNode l1, ListNode l2) {
+        ListNode dummy = new ListNode(0);
+        ListNode cur = dummy;
+        int carry = 0;                            // 进位
+        while (l1 != null || l2 != null || carry != 0) {
+            int sum = carry;
+            if (l1 != null) {
+                sum += l1.val;
+                l1 = l1.next;
+            }
+            if (l2 != null) {
+                sum += l2.val;
+                l2 = l2.next;
+            }
+            carry = sum / 10;
+            cur.next = new ListNode(sum % 10);    // 当前位
+            cur = cur.next;
+        }
+        return dummy.next;
+    }
+}
+// 时间复杂度 O(max(m, n))，空间 O(1)（不计输出链表）。
+
+###0019
+// 思路：哑节点 + 快慢指针。fast 先走 n+1 步，然后快慢同速前进，
+// fast 到达 null 时 slow 正好在倒数第 n+1 个节点上，直接跳过倒数第 n 个。
+// 哑节点统一处理"删除头节点"的情况。一趟扫描完成。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+class Solution {
+    public ListNode removeNthFromEnd(ListNode head, int n) {
+        ListNode dummy = new ListNode(0, head);
+        ListNode fast = dummy, slow = dummy;
+        for (int i = 0; i <= n; i++) {            // fast 先走 n+1 步
+            fast = fast.next;
+        }
+        while (fast != null) {                    // 同速前进
+            fast = fast.next;
+            slow = slow.next;
+        }
+        slow.next = slow.next.next;               // 跳过被删节点
+        return dummy.next;
+    }
+}
+// 时间复杂度 O(L)（L 为链表长度），空间复杂度 O(1)。
+
+###0024
+// 思路：哑节点 + 每次取一对节点交换。
+// 记 prev 为已处理部分的尾节点，交换 prev 后面两个节点 a、b 后 prev 移到 a。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+class Solution {
+    public ListNode swapPairs(ListNode head) {
+        ListNode dummy = new ListNode(0, head);
+        ListNode prev = dummy;
+        while (prev.next != null && prev.next.next != null) {
+            ListNode a = prev.next;
+            ListNode b = a.next;
+            // 交换 a、b：prev -> b -> a -> (后面)
+            a.next = b.next;
+            b.next = a;
+            prev.next = b;
+            prev = a;                             // a 换到了后面，成为新的 prev
+        }
+        return dummy.next;
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+
+###0025
+// 思路：哑节点 + 分组处理。每组先检查是否够 k 个，够则组内头插式反转，
+// 记录反转前后的首尾，与前一组、后一组正确连接。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+class Solution {
+    public ListNode reverseKGroup(ListNode head, int k) {
+        ListNode dummy = new ListNode(0, head);
+        ListNode prevGroup = dummy;               // 上一组反转后的尾节点
+
+        while (true) {
+            // 检查从 prevGroup.next 开始是否还有 k 个节点
+            ListNode end = prevGroup;
+            for (int i = 0; i < k && end != null; i++) {
+                end = end.next;
+            }
+            if (end == null) break;               // 不足 k 个，保持原序
+
+            ListNode groupHead = prevGroup.next;  // 本组第一个（反转后变最后一个）
+            ListNode nextGroup = end.next;        // 下一组开头
+
+            // 组内反转 [groupHead, end]
+            ListNode prev = nextGroup;            // 反转后指向下一组开头
+            ListNode cur = groupHead;
+            while (cur != nextGroup) {
+                ListNode next = cur.next;
+                cur.next = prev;
+                prev = cur;
+                cur = next;
+            }
+            prevGroup.next = end;                 // 前一组接上反转后的新头
+            prevGroup = groupHead;                // 本组反转后的尾
+        }
+        return dummy.next;
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+
+###0138
+// 思路：回溯 + 哈希表建立"原节点 -> 拷贝节点"的映射。
+// 第一遍只拷贝节点，第二遍根据映射连 next 和 random。
+// 节点定义：class Node { int val; Node next; Node random; }
+class Solution {
+    public Node copyRandomList(Node head) {
+        if (head == null) return null;
+        Map<Node, Node> map = new HashMap<>();    // 原节点 -> 新节点
+
+        // 第一遍：为每个节点创建拷贝
+        Node cur = head;
+        while (cur != null) {
+            map.put(cur, new Node(cur.val));
+            cur = cur.next;
+        }
+        // 第二遍：连接 next 和 random（映射保证指向的是新节点）
+        cur = head;
+        while (cur != null) {
+            Node copy = map.get(cur);
+            copy.next = map.get(cur.next);        // null 也能正确返回 null
+            copy.random = map.get(cur.random);
+            cur = cur.next;
+        }
+        return map.get(head);
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。
+// 进阶 O(1) 空间解法：把拷贝节点插入原节点后面，再拆分原链和拷贝链。
+
+###0148
+// 思路：归并排序（链表版），O(n log n)。
+// 快慢指针找中点断开 -> 递归排序两半 -> 合并两个有序链表。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+class Solution {
+    public ListNode sortList(ListNode head) {
+        // 递归终点：空或单节点
+        if (head == null || head.next == null) return head;
+
+        // 1) 快慢指针找中点，slow 停在前半段末尾
+        ListNode slow = head, fast = head.next;
+        while (fast != null && fast.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+        }
+        ListNode mid = slow.next;
+        slow.next = null;                         // 断开成两半
+
+        // 2) 分别排序
+        ListNode left = sortList(head);
+        ListNode right = sortList(mid);
+
+        // 3) 合并两个有序链表
+        return merge(left, right);
+    }
+
+    private ListNode merge(ListNode l1, ListNode l2) {
+        ListNode dummy = new ListNode(0);
+        ListNode cur = dummy;
+        while (l1 != null && l2 != null) {
+            if (l1.val <= l2.val) {
+                cur.next = l1;
+                l1 = l1.next;
+            } else {
+                cur.next = l2;
+                l2 = l2.next;
+            }
+            cur = cur.next;
+        }
+        cur.next = (l1 != null) ? l1 : l2;
+        return dummy.next;
+    }
+}
+// 时间复杂度 O(n log n)，递归栈空间 O(log n)。
+
+###0023
+// 思路：分治合并。k 条链两两合并，像归并排序一样逐层向上，
+// 每层总比较次数 O(n)（n 为所有节点总数），共 log k 层。
+// 链表节点定义：class ListNode { int val; ListNode next; }
+class Solution {
+    public ListNode mergeKLists(ListNode[] lists) {
+        if (lists == null || lists.length == 0) return null;
+        return mergeRange(lists, 0, lists.length - 1);
+    }
+
+    // 合并 lists[left..right]
+    private ListNode mergeRange(ListNode[] lists, int left, int right) {
+        if (left == right) return lists[left];
+        int mid = (left + right) / 2;
+        ListNode l1 = mergeRange(lists, left, mid);
+        ListNode l2 = mergeRange(lists, mid + 1, right);
+        return mergeTwo(l1, l2);
+    }
+
+    private ListNode mergeTwo(ListNode l1, ListNode l2) {
+        ListNode dummy = new ListNode(0);
+        ListNode cur = dummy;
+        while (l1 != null && l2 != null) {
+            if (l1.val <= l2.val) {
+                cur.next = l1;
+                l1 = l1.next;
+            } else {
+                cur.next = l2;
+                l2 = l2.next;
+            }
+            cur = cur.next;
+        }
+        cur.next = (l1 != null) ? l1 : l2;
+        return dummy.next;
+    }
+}
+// 时间复杂度 O(n log k)，空间 O(log k)（递归栈）。
+// 另解：小根堆维护 k 个当前头节点，O(n log k)。
+
+###0146
+// 思路：哈希表 + 双向链表。
+// 哈希表实现 O(1) 定位；双向链表维护使用顺序，头部是最近使用的，尾部是最久未用的。
+// 使用哑头、哑尾简化边界操作。
+class LRUCache {
+
+    private static class Node {
+        int key, val;
+        Node prev, next;
+        Node(int key, int val) {
+            this.key = key;
+            this.val = val;
+        }
+    }
+
+    private final int capacity;
+    private final Map<Integer, Node> map = new HashMap<>();
+    private final Node head = new Node(0, 0);     // 哑头，head.next 是最近使用的
+    private final Node tail = new Node(0, 0);     // 哑尾，tail.prev 是最久未用的
+
+    public LRUCache(int capacity) {
+        this.capacity = capacity;
+        head.next = tail;
+        tail.prev = head;
+    }
+
+    public int get(int key) {
+        Node node = map.get(key);
+        if (node == null) return -1;
+        moveToHead(node);                         // 访问过就是"最近使用"
+        return node.val;
+    }
+
+    public void put(int key, int value) {
+        Node node = map.get(key);
+        if (node != null) {
+            node.val = value;                     // 已存在：更新并提到头部
+            moveToHead(node);
+            return;
+        }
+        if (map.size() >= capacity) {
+            Node lru = tail.prev;                 // 淘汰最久未使用的（尾部前一个）
+            removeNode(lru);
+            map.remove(lru.key);
+        }
+        Node fresh = new Node(key, value);
+        map.put(key, fresh);
+        addToHead(fresh);
+    }
+
+    // 双向链表的四个基本操作
+    private void removeNode(Node node) {
+        node.prev.next = node.next;
+        node.next.prev = node.prev;
+    }
+
+    private void addToHead(Node node) {
+        node.next = head.next;
+        node.prev = head;
+        head.next.prev = node;
+        head.next = node;
+    }
+
+    private void moveToHead(Node node) {
+        removeNode(node);
+        addToHead(node);
+    }
+}
+// get 与 put 均为 O(1) 时间、O(capacity) 空间。
+
+###0094
+// 思路：迭代模拟中序遍历（左 -> 根 -> 右）。
+// 一路压栈走到最左，弹出访问，再转向右子树。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public List<Integer> inorderTraversal(TreeNode root) {
+        List<Integer> res = new ArrayList<>();
+        Deque<TreeNode> stack = new ArrayDeque<>();
+        TreeNode cur = root;
+        while (cur != null || !stack.isEmpty()) {
+            while (cur != null) {                 // 一路向左压栈
+                stack.push(cur);
+                cur = cur.left;
+            }
+            cur = stack.pop();                    // 弹出最左节点（此时该访问它）
+            res.add(cur.val);
+            cur = cur.right;                      // 转向右子树
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(n)，空间 O(h)，h 为树高。
+
+###0104
+// 思路：递归。树的最大深度 = max(左子树深度, 右子树深度) + 1。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public int maxDepth(TreeNode root) {
+        if (root == null) return 0;               // 空树深度为 0
+        int left = maxDepth(root.left);
+        int right = maxDepth(root.right);
+        return Math.max(left, right) + 1;
+    }
+}
+// 时间复杂度 O(n)，空间 O(h)（递归栈）。
+
+###0226
+// 思路：递归。交换每个节点的左右子树即可。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public TreeNode invertTree(TreeNode root) {
+        if (root == null) return null;
+        TreeNode left = invertTree(root.left);    // 先翻转子树
+        TreeNode right = invertTree(root.right);
+        root.left = right;                        // 再交换左右
+        root.right = left;
+        return root;
+    }
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0101
+// 思路：递归比较。树对称等价于：左子树与右子树互为镜像。
+// 两棵树互为镜像 = 根值相等 + (左.左 与 右.右 镜像) + (左.右 与 右.左 镜像)。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public boolean isSymmetric(TreeNode root) {
+        return isMirror(root.left, root.right);
+    }
+
+    private boolean isMirror(TreeNode a, TreeNode b) {
+        if (a == null && b == null) return true;  // 都为空：镜像
+        if (a == null || b == null) return false; // 一空一非空：不镜像
+        return a.val == b.val
+                && isMirror(a.left, b.right)      // 外侧对镜像
+                && isMirror(a.right, b.left);     // 内侧对镜像
+    }
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0543
+// 思路：递归求每个节点为起点的最大深度，同时用全局变量记录
+// "以每个节点为拐点的路径长度 = 左深 + 右深"的最大值。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    private int maxDiameter = 0;
+
+    public int diameterOfBinaryTree(TreeNode root) {
+        depth(root);
+        return maxDiameter;
+    }
+
+    // 返回以 node 为起点向下延伸的最大深度，顺便更新直径
+    private int depth(TreeNode node) {
+        if (node == null) return 0;
+        int left = depth(node.left);
+        int right = depth(node.right);
+        // 经过 node 的最长路径 = 左深 + 右深（边数）
+        maxDiameter = Math.max(maxDiameter, left + right);
+        return Math.max(left, right) + 1;
+    }
+}
+// 时间复杂度 O(n)，空间 O(h)。

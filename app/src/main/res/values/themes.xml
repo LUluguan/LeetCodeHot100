@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Hot100" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/lc_orange</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/lc_orange_light</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/lc_orange_dark</item>
+    </style>
+</resources>

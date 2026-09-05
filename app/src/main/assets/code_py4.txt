@@ -1,0 +1,384 @@
+###0131
+# 思路：回文 DP 预处理（is_pal[i][j]: s[i..j] 是否回文）+ 回溯分割。
+class Solution:
+    def partition(self, s: str) -> List[List[str]]:
+        n = len(s)
+        # is_pal[i][j] = (s[i]==s[j]) && (长度<2 || 内部回文)
+        is_pal = [[False] * n for _ in range(n)]
+        for i in range(n - 1, -1, -1):
+            for j in range(i, n):
+                is_pal[i][j] = (s[i] == s[j]) and (j - i < 2 or is_pal[i + 1][j - 1])
+
+        res, path = [], []
+
+        def backtrack(start):
+            if start == n:
+                res.append(path[:])
+                return
+            for end in range(start, n):
+                if is_pal[start][end]:   # s[start..end] 是回文才选
+                    path.append(s[start:end + 1])
+                    backtrack(end + 1)
+                    path.pop()
+
+        backtrack(0)
+        return res
+# 时间复杂度 O(n·2^n)，空间 O(n^2)。
+
+###0051
+# 思路：逐行回溯。cols 查列，d1（r-c）、d2（r+c）查两条对角线。
+class Solution:
+    def solveNQueens(self, n: int) -> List[List[str]]:
+        res = []
+        queens = [-1] * n                # queens[r] = 第 r 行皇后的列
+        cols, d1, d2 = set(), set(), set()
+
+        def backtrack(row):
+            if row == n:
+                res.append(['.' * c + 'Q' + '.' * (n - c - 1) for c in queens])
+                return
+            for c in range(n):
+                if c in cols or (row - c) in d1 or (row + c) in d2:
+                    continue
+                queens[row] = c          # 做选择
+                cols.add(c)
+                d1.add(row - c)
+                d2.add(row + c)
+                backtrack(row + 1)
+                cols.remove(c)           # 撤销
+                d1.remove(row - c)
+                d2.remove(row + c)
+
+        backtrack(0)
+        return res
+# 时间复杂度 O(n!)，空间 O(n)。
+
+###0035
+# 思路：标准二分；找不到时 left 停在"第一个大于 target 的位置"，即插入点。
+class Solution:
+    def searchInsert(self, nums: List[int], target: int) -> int:
+        left, right = 0, len(nums) - 1
+        while left <= right:
+            mid = (left + right) // 2
+            if nums[mid] == target:
+                return mid
+            elif nums[mid] < target:
+                left = mid + 1
+            else:
+                right = mid - 1
+        return left
+# 时间复杂度 O(log n)，空间 O(1)。
+
+###0074
+# 思路：一维化二分：row = mid // n，col = mid % n。
+class Solution:
+    def searchMatrix(self, matrix: List[List[int]], target: int) -> bool:
+        m, n = len(matrix), len(matrix[0])
+        lo, hi = 0, m * n - 1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            val = matrix[mid // n][mid % n]
+            if val == target:
+                return True
+            elif val < target:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        return False
+# 时间复杂度 O(log(mn))，空间 O(1)。
+
+###0034
+# 思路：两次"第一个 >= target"的二分（bisect_left 等价手写）定位左右边界。
+class Solution:
+    def searchRange(self, nums: List[int], target: int) -> List[int]:
+        def lower_bound(t):
+            lo, hi = 0, len(nums)        # 半开区间 [lo, hi)
+            while lo < hi:
+                mid = (lo + hi) // 2
+                if nums[mid] >= t:
+                    hi = mid
+                else:
+                    lo = mid + 1
+            return lo
+
+        first = lower_bound(target)
+        if first == len(nums) or nums[first] != target:
+            return [-1, -1]
+        return [first, lower_bound(target + 1) - 1]
+# 时间复杂度 O(log n)，空间 O(1)。
+
+###0033
+# 思路：mid 切开后至少一半有序；在有序的一半里做值域判断决定收缩方向。
+class Solution:
+    def search(self, nums: List[int], target: int) -> int:
+        left, right = 0, len(nums) - 1
+        while left <= right:
+            mid = (left + right) // 2
+            if nums[mid] == target:
+                return mid
+            if nums[left] <= nums[mid]:                    # 左半有序
+                if nums[left] <= target < nums[mid]:
+                    right = mid - 1
+                else:
+                    left = mid + 1
+            else:                                          # 右半有序
+                if nums[mid] < target <= nums[right]:
+                    left = mid + 1
+                else:
+                    right = mid - 1
+        return -1
+# 时间复杂度 O(log n)，空间 O(1)。
+
+###0153
+# 思路：与右端点比较：nums[mid] > nums[right] 说明最小值在 mid 右侧。
+class Solution:
+    def findMin(self, nums: List[int]) -> int:
+        left, right = 0, len(nums) - 1
+        while left < right:
+            mid = (left + right) // 2
+            if nums[mid] > nums[right]:
+                left = mid + 1
+            else:
+                right = mid                # mid 可能就是最小值
+        return nums[left]
+# 时间复杂度 O(log n)，空间 O(1)。
+
+###0004
+# 思路：中位数分割线二分：在短数组上枚举其贡献 i 个，长数组自动贡献
+# leftHalf - i 个，用 ±无穷 处理边界，交叉比较四条边界判断合法性。
+class Solution:
+    def findMedianSortedArrays(self, nums1: List[int], nums2: List[int]) -> float:
+        if len(nums1) > len(nums2):        # 保证在短数组上二分
+            nums1, nums2 = nums2, nums1
+        m, n = len(nums1), len(nums2)
+        left_half = (m + n + 1) // 2
+        lo, hi = 0, m
+        while lo <= hi:
+            i = (lo + hi) // 2             # nums1 贡献 i 个
+            j = left_half - i              # nums2 贡献 j 个
+            import math
+            i_l = -math.inf if i == 0 else nums1[i - 1]
+            i_r = math.inf if i == m else nums1[i]
+            j_l = -math.inf if j == 0 else nums2[j - 1]
+            j_r = math.inf if j == n else nums2[j]
+            if i_l <= j_r and j_l <= i_r:  # 合法分割
+                if (m + n) % 2 == 1:
+                    return float(max(i_l, j_l))
+                return (max(i_l, j_l) + min(i_r, j_r)) / 2
+            elif i_l > j_r:
+                hi = i - 1                 # nums1 拿多了
+            else:
+                lo = i + 1                 # nums1 拿少了
+        return 0.0
+# 时间复杂度 O(log(min(m, n)))，空间 O(1)。
+
+###0020
+# 思路：栈配对：左括号入栈，右括号弹出栈顶检查配对；最后栈必须为空。
+class Solution:
+    def isValid(self, s: str) -> bool:
+        pairs = {')': '(', ']': '[', '}': '{'}
+        stack = []
+        for c in s:
+            if c in '([{':
+                stack.append(c)
+            else:
+                if not stack or stack.pop() != pairs[c]:
+                    return False
+        return not stack
+# 时间复杂度 O(n)，空间 O(n)。
+
+###0155
+# 思路：辅助栈 mins 同步维护：mins[i] = 前 i+1 个元素中的最小值。
+class MinStack:
+    def __init__(self):
+        self.data = []
+        self.mins = []                   # mins[i] = 前 i+1 个的最小值
+
+    def push(self, val: int) -> None:
+        cur_min = val if not self.mins else min(self.mins[-1], val)
+        self.data.append(val)
+        self.mins.append(cur_min)
+
+    def pop(self) -> None:
+        self.data.pop()
+        self.mins.pop()
+
+    def top(self) -> int:
+        return self.data[-1]
+
+    def getMin(self) -> int:
+        return self.mins[-1]
+# 所有操作 O(1)。
+
+###0394
+# 思路：递归解码：读到数字后跳过 '['，递归解析到匹配的 ']'，重复 n 次。
+class Solution:
+    def decodeString(self, s: str) -> str:
+        self.pos = 0
+
+        def parse() -> str:
+            parts = []
+            while self.pos < len(s) and s[self.pos] != ']':
+                if s[self.pos].isdigit():
+                    num = 0
+                    while s[self.pos].isdigit():   # 数字可能多位
+                        num = num * 10 + int(s[self.pos])
+                        self.pos += 1
+                    self.pos += 1                  # 跳过 '['
+                    inner = parse()                # 递归解析内层
+                    self.pos += 1                  # 跳过 ']'
+                    parts.append(inner * num)      # 重复 num 次
+                else:
+                    parts.append(s[self.pos])
+                    self.pos += 1
+            return ''.join(parts)
+
+        return parse()
+# 时间复杂度 O(输出长度)，空间同。
+
+###0739
+# 思路：单调递减栈（存下标）：今天温度更高时，栈里所有更冷的日子都能结算。
+class Solution:
+    def dailyTemperatures(self, temperatures: List[int]) -> List[int]:
+        n = len(temperatures)
+        answer = [0] * n
+        stack = []                       # 存下标，对应温度单调递减
+        for i, t in enumerate(temperatures):
+            while stack and t > temperatures[stack[-1]]:
+                prev = stack.pop()
+                answer[prev] = i - prev  # 相隔天数
+            stack.append(i)
+        return answer
+# 时间复杂度 O(n)，空间 O(n)。
+
+###0084
+# 思路：单调递增栈 + 末尾哨兵 0：弹出柱子时左右边界同时确定，结算面积。
+class Solution:
+    def largestRectangleArea(self, heights: List[int]) -> int:
+        h = heights + [0]                # 哨兵：逼出栈内所有柱子
+        stack = []                       # 存下标，高度单调递增
+        best = 0
+        for i, x in enumerate(h):
+            while stack and x < h[stack[-1]]:
+                height = h[stack.pop()]
+                left = stack[-1] if stack else -1    # 左边界
+                best = max(best, height * (i - left - 1))
+            stack.append(i)
+        return best
+# 时间复杂度 O(n)，空间 O(n)。
+
+###0215
+# 思路：快速选择：随机基准 partition 后只在包含目标的一侧继续，平均 O(n)。
+import random
+
+class Solution:
+    def findKthLargest(self, nums: List[int], k: int) -> int:
+        target = len(nums) - k           # 升序后第 k 大的下标
+        lo, hi = 0, len(nums) - 1
+        while True:
+            # 随机基准换到末尾
+            p = random.randint(lo, hi)
+            nums[p], nums[hi] = nums[hi], nums[p]
+            pivot, i = nums[hi], lo
+            for j in range(lo, hi):
+                if nums[j] < pivot:
+                    nums[i], nums[j] = nums[j], nums[i]
+                    i += 1
+            nums[i], nums[hi] = nums[hi], nums[i]   # 基准归位
+            if i == target:
+                return nums[i]
+            elif i < target:
+                lo = i + 1
+            else:
+                hi = i - 1
+# 平均时间 O(n)，空间 O(1)。
+
+###0347
+# 思路：Counter 统计频次，most_common(k) 内部即"按频次排序取前 k"。
+# 手写桶排思路见 Java 版。
+from collections import Counter
+
+class Solution:
+    def topKFrequent(self, nums: List[int], k: int) -> List[int]:
+        return [v for v, _ in Counter(nums).most_common(k)]
+# 时间复杂度 O(n log n)，空间 O(n)。
+
+###0295
+# 思路：对顶堆。Python 用两个堆：大根堆用"取负"技巧模拟。
+# 约定 small（大根堆，存负值）比 large（小根堆）多 1 或相等。
+import heapq
+
+class MedianFinder:
+    def __init__(self):
+        self.small = []                  # 较小一半（存负数 => 大根堆）
+        self.large = []                  # 较大一半（小根堆）
+
+    def addNum(self, num: int) -> None:
+        heapq.heappush(self.small, -num)
+        heapq.heappush(self.large, -heapq.heappop(self.small))   # 平衡
+        if len(self.large) > len(self.small):
+            heapq.heappush(self.small, -heapq.heappop(self.large))
+
+    def findMedian(self) -> float:
+        if len(self.small) > len(self.large):
+            return float(-self.small[0])
+        return (-self.small[0] + self.large[0]) / 2
+# addNum O(log n)，findMedian O(1)。
+
+###0121
+# 思路：一次遍历维护历史最低价，"今天卖出"更新最大利润。
+class Solution:
+    def maxProfit(self, prices: List[int]) -> int:
+        min_price = float('inf')
+        best = 0
+        for p in prices:
+            if p < min_price:
+                min_price = p            # 更低的买入点
+            else:
+                best = max(best, p - min_price)
+        return best
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0055
+# 思路：贪心维护最远可达下标 max_reach；i > max_reach 说明到不了。
+class Solution:
+    def canJump(self, nums: List[int]) -> bool:
+        max_reach = 0
+        for i, x in enumerate(nums):
+            if i > max_reach:
+                return False             # 位置 i 不可达
+            max_reach = max(max_reach, i + x)
+            if max_reach >= len(nums) - 1:
+                return True              # 已能到最后
+        return True
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0045
+# 思路：贪心分层（隐式 BFS）：current_end 是本跳边界，
+# 扫描中记录 farthest，走到边界时步数 +1。只扫到 n-2。
+class Solution:
+    def jump(self, nums: List[int]) -> int:
+        steps = current_end = farthest = 0
+        for i in range(len(nums) - 1):
+            farthest = max(farthest, i + nums[i])
+            if i == current_end:         # 必须再跳一次
+                steps += 1
+                current_end = farthest
+        return steps
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0763
+# 思路：先记录每个字母最后出现的位置；扫描时延伸片段终点，
+# i 到达终点时切分一段。
+class Solution:
+    def partitionLabels(self, s: str) -> List[int]:
+        last = {c: i for i, c in enumerate(s)}   # 每个字母最后位置
+        res = []
+        start = end = 0
+        for i, c in enumerate(s):
+            end = max(end, last[c])      # 片段必须包含这些位置
+            if i == end:                 # 当前位置就是片段终点
+                res.append(i - start + 1)
+                start = i + 1
+        return res
+# 时间复杂度 O(n)，空间 O(26)。

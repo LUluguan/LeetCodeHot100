@@ -1,0 +1,423 @@
+###0102
+# 思路：BFS 层序遍历：队列一次存一整层，逐层收集。
+from collections import deque
+
+class Solution:
+    def levelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:
+        if not root:
+            return []
+        res = []
+        queue = deque([root])
+        while queue:
+            size = len(queue)            # 当前层节点数
+            level = []
+            for _ in range(size):
+                node = queue.popleft()
+                level.append(node.val)
+                if node.left:
+                    queue.append(node.left)
+                if node.right:
+                    queue.append(node.right)
+            res.append(level)
+        return res
+# 时间复杂度 O(n)，空间 O(n)。
+
+###0108
+# 思路：取中点作根，左右两半递归建子树，天然高度平衡。
+class Solution:
+    def sortedArrayToBST(self, nums: List[int]) -> Optional[TreeNode]:
+        def build(lo, hi):
+            if lo > hi:
+                return None
+            mid = (lo + hi) // 2
+            node = TreeNode(nums[mid])
+            node.left = build(lo, mid - 1)
+            node.right = build(mid + 1, hi)
+            return node
+        return build(0, len(nums) - 1)
+# 时间复杂度 O(n)，空间 O(log n)。
+
+###0098
+# 思路：上下界递归：左子树上界收紧为当前值，右子树下界收紧为当前值。
+class Solution:
+    def isValidBST(self, root: Optional[TreeNode]) -> bool:
+        def validate(node, lo, hi):
+            if not node:
+                return True
+            if not (lo < node.val < hi):   # 必须落在开区间内
+                return False
+            return (validate(node.left, lo, node.val)
+                    and validate(node.right, node.val, hi))
+        return validate(root, float('-inf'), float('inf'))
+# 时间复杂度 O(n)，空间 O(h)。
+
+###0230
+# 思路：迭代中序，第 k 个弹出的节点即第 k 小，找到后提前返回。
+class Solution:
+    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:
+        stack, cur = [], root
+        while cur or stack:
+            while cur:                   # 一路向左
+                stack.append(cur)
+                cur = cur.left
+            cur = stack.pop()
+            k -= 1
+            if k == 0:                   # 第 k 个访问到的
+                return cur.val
+            cur = cur.right
+        return -1
+# 时间复杂度 O(H + k)，空间 O(H)。
+
+###0199
+# 思路：DFS 按 根→右→左 遍历，每个深度第一个到达的节点即右视图。
+class Solution:
+    def rightSideView(self, root: Optional[TreeNode]) -> List[int]:
+        res = []
+        def dfs(node, depth):
+            if not node:
+                return
+            if depth == len(res):        # 本层第一个到达
+                res.append(node.val)
+            dfs(node.right, depth + 1)   # 先右后左
+            dfs(node.left, depth + 1)
+        dfs(root, 0)
+        return res
+# 时间复杂度 O(n)，空间 O(h)。
+
+###0114
+# 思路：前驱节点拼接（Morris 式，O(1) 空间）：左子树最右节点接原右子树，
+# 左子树整体搬到右边。
+class Solution:
+    def flatten(self, root: Optional[TreeNode]) -> None:
+        cur = root
+        while cur:
+            if cur.left:
+                pre = cur.left
+                while pre.right:         # 找左子树最右节点
+                    pre = pre.right
+                pre.right = cur.right    # 原右子树接到前驱
+                cur.right, cur.left = cur.left, None   # 左子树搬到右边
+            cur = cur.right
+# 时间复杂度 O(n)，空间 O(1)。
+
+###0105
+# 思路：前序首位是根；中序定位根分割左右（用哈希表 O(1) 查位置）。
+class Solution:
+    def buildTree(self, preorder: List[int], inorder: List[int]) -> Optional[TreeNode]:
+        idx = {v: i for i, v in enumerate(inorder)}   # 值 -> 中序下标
+        self.pre = 0                         # 前序当前下标
+
+        def build(lo, hi):
+            if lo > hi:
+                return None
+            root_val = preorder[self.pre]
+            self.pre += 1
+            node = TreeNode(root_val)
+            mid = idx[root_val]
+            node.left = build(lo, mid - 1)   # 必须先左后右（前序顺序）
+            node.right = build(mid + 1, hi)
+            return node
+
+        return build(0, len(inorder) - 1)
+# 时间复杂度 O(n)，空间 O(n)。
+
+###0437
+# 思路：前缀和 + 回溯（树上版 560 题）：用 defaultdict 统计
+# 根到当前节点路径上的各前缀和，进入节点查 pre - target，离开时撤销。
+from collections import defaultdict
+
+class Solution:
+    def pathSum(self, root: Optional[TreeNode], targetSum: int) -> int:
+        count = defaultdict(int)
+        count[0] = 1                     # 空前缀：支持从根开始的路径
+        self.ans = 0
+
+        def dfs(node, cur):
+            if not node:
+                return
+            cur += node.val
+            self.ans += count[cur - targetSum]   # 以当前节点结尾的路径数
+            count[cur] += 1
+            dfs(node.left, cur)
+            dfs(node.right, cur)
+            count[cur] -= 1              # 回溯撤销（Python 可为负，无需判 0）
+
+        dfs(root, 0)
+        return self.ans
+# 时间复杂度 O(n)，空间 O(n)。
+
+###0236
+# 思路：后序递归：找到 p/q 返回自身；左右都非空时当前节点即答案。
+class Solution:
+    def lowestCommonAncestor(self, root: 'TreeNode', p: 'TreeNode',
+                             q: 'TreeNode') -> 'TreeNode':
+        if not root or root is p or root is q:
+            return root
+        left = self.lowestCommonAncestor(root.left, p, q)
+        right = self.lowestCommonAncestor(root.right, p, q)
+        if left and right:               # p、q 分居两侧
+            return root
+        return left or right
+# 时间复杂度 O(n)，空间 O(h)。
+
+###0124
+# 思路：递归返回"单侧下探最大和"（负贡献舍弃），全局变量记录拐弯路径和。
+class Solution:
+    def maxPathSum(self, root: Optional[TreeNode]) -> int:
+        self.ans = float('-inf')
+
+        def dfs(node):
+            if not node:
+                return 0
+            l = max(0, dfs(node.left))   # 左侧贡献，负数取 0
+            r = max(0, dfs(node.right))
+            self.ans = max(self.ans, node.val + l + r)   # 拐弯候选
+            return node.val + max(l, r)  # 只能给父节点一侧
+
+        dfs(root)
+        return self.ans
+# 时间复杂度 O(n)，空间 O(h)。
+
+###0200
+# 思路：DFS 沉岛：遇到 '1' 计数 +1，并把整个连通块改成 '0'（标记已访问）。
+class Solution:
+    def numIslands(self, grid: List[List[str]]) -> int:
+        m, n = len(grid), len(grid[0])
+
+        def dfs(i, j):
+            if i < 0 or i >= m or j < 0 or j >= n or grid[i][j] != '1':
+                return
+            grid[i][j] = '0'             # 沉岛
+            dfs(i + 1, j)
+            dfs(i - 1, j)
+            dfs(i, j + 1)
+            dfs(i, j - 1)
+
+        count = 0
+        for i in range(m):
+            for j in range(n):
+                if grid[i][j] == '1':
+                    count += 1
+                    dfs(i, j)
+        return count
+# 时间复杂度 O(mn)，空间 O(mn)。
+
+###0994
+# 思路：多源 BFS：所有腐烂橘子同时入队，逐层扩散，层数即分钟数。
+from collections import deque
+
+class Solution:
+    def orangesRotting(self, grid: List[List[int]]) -> int:
+        m, n = len(grid), len(grid[0])
+        queue = deque()
+        fresh = 0
+        for i in range(m):
+            for j in range(n):
+                if grid[i][j] == 2:
+                    queue.append((i, j))
+                elif grid[i][j] == 1:
+                    fresh += 1
+        if fresh == 0:
+            return 0
+        minutes = 0
+        while queue and fresh > 0:
+            minutes += 1
+            for _ in range(len(queue)):  # 一次扩散一分钟
+                x, y = queue.popleft()
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < m and 0 <= ny < n and grid[nx][ny] == 1:
+                        grid[nx][ny] = 2
+                        fresh -= 1
+                        queue.append((nx, ny))
+        return minutes if fresh == 0 else -1
+# 时间复杂度 O(mn)，空间 O(mn)。
+
+###0207
+# 思路：Kahn 拓扑排序：入度 0 先学，学完把后继入度减一，
+# 最终学完的课程数等于总数 <=> 无环。
+from collections import deque
+
+class Solution:
+    def canFinish(self, numCourses: int, prerequisites: List[List[int]]) -> bool:
+        graph = [[] for _ in range(numCourses)]   # b -> a
+        indeg = [0] * numCourses
+        for a, b in prerequisites:
+            graph[b].append(a)
+            indeg[a] += 1
+        queue = deque(i for i in range(numCourses) if indeg[i] == 0)
+        taken = 0
+        while queue:
+            cur = queue.popleft()
+            taken += 1
+            for nxt in graph[cur]:
+                indeg[nxt] -= 1
+                if indeg[nxt] == 0:
+                    queue.append(nxt)
+        return taken == numCourses
+# 时间复杂度 O(V + E)，空间 O(V + E)。
+
+###0208
+# 思路：26 叉前缀树：路径即前缀，is_end 标记单词结尾。
+class Trie:
+    def __init__(self):
+        self.children = {}               # 字符 -> 子节点
+        self.is_end = False
+
+    def insert(self, word: str) -> None:
+        node = self
+        for c in word:
+            if c not in node.children:
+                node.children[c] = Trie()
+            node = node.children[c]
+        node.is_end = True
+
+    def _find(self, s: str):
+        node = self
+        for c in s:
+            node = node.children.get(c)
+            if node is None:
+                return None
+        return node
+
+    def search(self, word: str) -> bool:
+        node = self._find(word)
+        return node is not None and node.is_end   # 必须是完整单词
+
+    def startsWith(self, prefix: str) -> bool:
+        return self._find(prefix) is not None     # 有路径就算前缀
+# 单次操作 O(L)，L 为字符串长度。
+
+###0046
+# 思路：回溯 + used 标记：排列关心顺序，每层可从任意未使用的位置选。
+class Solution:
+    def permute(self, nums: List[int]) -> List[List[int]]:
+        res, path = [], []
+        used = [False] * len(nums)
+
+        def backtrack():
+            if len(path) == len(nums):
+                res.append(path[:])      # 收集拷贝
+                return
+            for i in range(len(nums)):
+                if used[i]:
+                    continue
+                used[i] = True           # 做选择
+                path.append(nums[i])
+                backtrack()
+                path.pop()               # 撤销
+                used[i] = False
+
+        backtrack()
+        return res
+# 时间复杂度 O(n·n!)，空间 O(n)。
+
+###0078
+# 思路：回溯 + start 控制只向后选（天然去重），进入函数即收集当前子集。
+class Solution:
+    def subsets(self, nums: List[int]) -> List[List[int]]:
+        res, path = [], []
+
+        def backtrack(start):
+            res.append(path[:])          # 每个节点都是有效子集
+            for i in range(start, len(nums)):
+                path.append(nums[i])
+                backtrack(i + 1)
+                path.pop()
+
+        backtrack(0)
+        return res
+# 时间复杂度 O(n·2^n)，空间 O(n)。
+
+###0017
+# 思路：回溯逐位选字母；空输入返回空列表。
+class Solution:
+    def letterCombinations(self, digits: str) -> List[str]:
+        if not digits:
+            return []
+        MAP = {"2": "abc", "3": "def", "4": "ghi", "5": "jkl",
+               "6": "mno", "7": "pqrs", "8": "tuv", "9": "wxyz"}
+        res, path = [], []
+
+        def backtrack(idx):
+            if idx == len(digits):
+                res.append(''.join(path))
+                return
+            for c in MAP[digits[idx]]:
+                path.append(c)
+                backtrack(idx + 1)
+                path.pop()
+
+        backtrack(0)
+        return res
+# 时间复杂度 O(4^n·n)，空间 O(n)。
+
+###0039
+# 思路：排序 + 回溯 + 剪枝：递归传 i（可重复选当前数）；
+# 剩余目标小于当前数时剪枝。
+class Solution:
+    def combinationSum(self, candidates: List[int], target: int) -> List[List[int]]:
+        candidates.sort()
+        res, path = [], []
+
+        def backtrack(remain, start):
+            if remain == 0:
+                res.append(path[:])
+                return
+            for i in range(start, len(candidates)):
+                if candidates[i] > remain:   # 后面更大，剪枝
+                    break
+                path.append(candidates[i])
+                backtrack(remain - candidates[i], i)   # i 不变：可重复选
+                path.pop()
+
+        backtrack(target, 0)
+        return res
+# 时间复杂度 O(n·2^target)（上界），空间 O(target)。
+
+###0022
+# 思路：回溯：左括号数 < n 可加左；右括号数 < 已用左括号数才可加右。
+class Solution:
+    def generateParenthesis(self, n: int) -> List[str]:
+        res, path = [], []
+
+        def backtrack(open_cnt, close_cnt):
+            if len(path) == 2 * n:
+                res.append(''.join(path))
+                return
+            if open_cnt < n:
+                path.append('(')
+                backtrack(open_cnt + 1, close_cnt)
+                path.pop()
+            if close_cnt < open_cnt:
+                path.append(')')
+                backtrack(open_cnt, close_cnt + 1)
+                path.pop()
+
+        backtrack(0, 0)
+        return res
+# 时间复杂度 O(4^n / sqrt(n))（卡特兰数），空间 O(n)。
+
+###0079
+# 思路：从每个格子尝试 DFS 匹配单词，'#' 临时标记占用，回溯还原。
+class Solution:
+    def exist(self, board: List[List[str]], word: str) -> bool:
+        m, n = len(board), len(board[0])
+
+        def dfs(i, j, k):
+            if i < 0 or i >= m or j < 0 or j >= n or board[i][j] != word[k]:
+                return False
+            if k == len(word) - 1:       # 最后一个字符也匹配了
+                return True
+            saved, board[i][j] = board[i][j], '#'
+            found = (dfs(i + 1, j, k + 1) or dfs(i - 1, j, k + 1)
+                     or dfs(i, j + 1, k + 1) or dfs(i, j - 1, k + 1))
+            board[i][j] = saved          # 回溯还原
+            return found
+
+        for i in range(m):
+            for j in range(n):
+                if dfs(i, j, 0):
+                    return True
+        return False
+# 时间复杂度 O(mn·3^L)，空间 O(L)。

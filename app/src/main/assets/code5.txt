@@ -1,0 +1,464 @@
+###0070
+// 思路：动态规划。到达第 n 阶的最后一步要么从 n-1 阶爬 1 阶，要么从 n-2 阶爬 2 阶，
+// 所以 f(n) = f(n-1) + f(n-2)（斐波那契）。用滚动变量省掉数组。
+class Solution {
+    public int climbStairs(int n) {
+        int prev = 1, cur = 1;                    // f(0) = 1, f(1) = 1
+        for (int i = 2; i <= n; i++) {
+            int next = prev + cur;                // f(i) = f(i-1) + f(i-2)
+            prev = cur;
+            cur = next;
+        }
+        return cur;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0118
+// 思路：模拟生成。每行首尾是 1，中间元素 = 上一行相邻两元素之和。
+class Solution {
+    public List<List<Integer>> generate(int numRows) {
+        List<List<Integer>> res = new ArrayList<>();
+        for (int i = 0; i < numRows; i++) {
+            List<Integer> row = new ArrayList<>();
+            for (int j = 0; j <= i; j++) {
+                if (j == 0 || j == i) {
+                    row.add(1);                   // 每行首尾为 1
+                } else {
+                    // 中间元素 = 上一行相邻两数之和
+                    row.add(res.get(i - 1).get(j - 1) + res.get(i - 1).get(j));
+                }
+            }
+            res.add(row);
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(n^2)，空间 O(1)（不计输出）。
+
+###0198
+// 思路：动态规划。f(i) = 偷前 i 间房的最大金额。
+// 状态转移：f(i) = max(f(i-1) 不偷这家, f(i-2) + nums[i] 偷这家)。
+// 用滚动变量省空间。
+class Solution {
+    public int rob(int[] nums) {
+        int prev2 = 0;                            // f(i-2)
+        int prev1 = 0;                            // f(i-1)
+        for (int x : nums) {
+            int cur = Math.max(prev1, prev2 + x); // 偷或不偷当前这家
+            prev2 = prev1;
+            prev1 = cur;
+        }
+        return prev1;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0279
+// 思路：完全背包型 DP。f(i) = 凑出 i 所需的最少完全平方数个数。
+// 转移：f(i) = min(f(i - j*j) + 1)，j*j <= i。
+class Solution {
+    public int numSquares(int n) {
+        int[] dp = new int[n + 1];                // dp[i]: 最少数量
+        Arrays.fill(dp, Integer.MAX_VALUE);
+        dp[0] = 0;
+        for (int i = 1; i <= n; i++) {
+            for (int j = 1; j * j <= i; j++) {    // 枚举最后一个平方数 j*j
+                dp[i] = Math.min(dp[i], dp[i - j * j] + 1);
+            }
+        }
+        return dp[n];
+    }
+}
+// 时间复杂度 O(n * sqrt(n))，空间 O(n)。
+// 进阶：利用四平方定理，答案只可能是 1/2/3/4。
+
+###0322
+// 思路：完全背包。f(a) = 凑出金额 a 的最少硬币数。
+// 转移：f(a) = min(f(a - coin) + 1) 遍历每种硬币。初始化 f(0)=0，其余为无穷。
+class Solution {
+    public int coinChange(int[] coins, int amount) {
+        int[] dp = new int[amount + 1];
+        int INF = amount + 1;                     // 用不可能的大数表示凑不出
+        Arrays.fill(dp, INF);
+        dp[0] = 0;
+        for (int a = 1; a <= amount; a++) {
+            for (int coin : coins) {
+                if (coin <= a) {
+                    dp[a] = Math.min(dp[a], dp[a - coin] + 1);
+                }
+            }
+        }
+        return dp[amount] > amount ? -1 : dp[amount];
+    }
+}
+// 时间复杂度 O(amount * coins.length)，空间 O(amount)。
+
+###0139
+// 思路：DP。f(i) 表示 s[0..i) 能否被字典拆分。
+// 转移：f(i) = 存在 j < i 使 f(j) 且 s[j..i) 在字典中。
+// 用哈希集合快速判断单词是否在字典里。
+class Solution {
+    public boolean wordBreak(String s, List<String> wordDict) {
+        Set<String> dict = new HashSet<>(wordDict);
+        int n = s.length();
+        boolean[] dp = new boolean[n + 1];
+        dp[0] = true;                             // 空串可拆分
+        for (int i = 1; i <= n; i++) {
+            for (int j = 0; j < i; j++) {
+                // 前 j 个字符可拆 且 s[j..i) 是字典单词
+                if (dp[j] && dict.contains(s.substring(j, i))) {
+                    dp[i] = true;
+                    break;
+                }
+            }
+        }
+        return dp[n];
+    }
+}
+// 时间复杂度 O(n^2)（加上子串哈希开销），空间 O(n)。
+
+###0300
+// 思路：DP。f(i) = 以 nums[i] 结尾的最长严格递增子序列长度。
+// 转移：f(i) = max(f(j) + 1)，j < i 且 nums[j] < nums[i]。
+class Solution {
+    public int lengthOfLIS(int[] nums) {
+        int n = nums.length;
+        int[] dp = new int[n];
+        Arrays.fill(dp, 1);                       // 每个数自成长度为 1 的子序列
+        int best = 1;
+        for (int i = 1; i < n; i++) {
+            for (int j = 0; j < i; j++) {
+                if (nums[j] < nums[i]) {
+                    dp[i] = Math.max(dp[i], dp[j] + 1);
+                }
+            }
+            best = Math.max(best, dp[i]);
+        }
+        return best;
+    }
+}
+// 时间复杂度 O(n^2)，空间 O(n)。
+// 进阶：贪心 + 二分维护 tails 数组可到 O(n log n)。
+
+###0152
+// 思路：因为存在负数，"最小乘积"乘以负数会变成"最大乘积"，
+// 所以同时维护以 i 结尾的最大乘积 fmax 和最小乘积 fmin，两个一起转移。
+class Solution {
+    public int maxProduct(int[] nums) {
+        int fmax = nums[0], fmin = nums[0];       // 以当前元素结尾的最大/最小乘积
+        int best = nums[0];
+        for (int i = 1; i < nums.length; i++) {
+            int x = nums[i];
+            // 候选：自己另起一段 / 接在最大后面 / 接在最小后面（负负得正）
+            int candMax = Math.max(x, Math.max(fmax * x, fmin * x));
+            int candMin = Math.min(x, Math.min(fmax * x, fmin * x));
+            fmax = candMax;
+            fmin = candMin;
+            best = Math.max(best, fmax);
+        }
+        return best;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0416
+// 思路：01 背包可行性。若总和 sum 为奇数直接 false；
+// 目标是能否选出子集和为 sum/2。f(t) 表示能否凑出和 t，
+// 每个数字只能用一次，故 t 从大到小遍历。
+class Solution {
+    public boolean canPartition(int[] nums) {
+        int sum = 0;
+        for (int x : nums) sum += x;
+        if (sum % 2 != 0) return false;           // 总和为奇数，不可能平分
+
+        int target = sum / 2;
+        boolean[] dp = new boolean[target + 1];
+        dp[0] = true;                             // 凑出 0：什么都不选
+        for (int x : nums) {
+            for (int t = target; t >= x; t--) {   // 从大到小，保证每个数只用一次
+                dp[t] = dp[t] || dp[t - x];
+            }
+            if (dp[target]) return true;          // 提前结束
+        }
+        return dp[target];
+    }
+}
+// 时间复杂度 O(n * target)，空间 O(target)。
+
+###0032
+// 思路：栈存"最后未匹配的下标"哨兵。
+// 遇 '(' 下标入栈；遇 ')' 先弹栈：栈空则当前下标成为新哨兵，
+// 否则有效长度 = 当前下标 - 新栈顶（哨兵）。一次遍历 O(n)。
+class Solution {
+    public int longestValidParentheses(String s) {
+        Deque<Integer> stack = new ArrayDeque<>();
+        stack.push(-1);                           // 哨兵：最后一个无法匹配的位置
+        int best = 0;
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) == '(') {
+                stack.push(i);                    // 左括号下标入栈
+            } else {
+                stack.pop();                      // 先弹（可能是 '(' 或旧哨兵）
+                if (stack.isEmpty()) {
+                    stack.push(i);                // 右括号无配对，成为新哨兵
+                } else {
+                    // 有效段起点是当前栈顶哨兵的下一个位置
+                    best = Math.max(best, i - stack.peek());
+                }
+            }
+        }
+        return best;
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。
+// 另解：DP 或正反两趟计数法。
+
+###0062
+// 思路：DP。f(i,j) = 到达 (i,j) 的路径数 = f(i-1,j) + f(i,j-1)。
+// 第一行、第一列都只有 1 条路径。用一维滚动数组优化空间。
+class Solution {
+    public int uniquePaths(int m, int n) {
+        int[] dp = new int[n];
+        Arrays.fill(dp, 1);                       // 第一行全为 1
+        for (int i = 1; i < m; i++) {
+            for (int j = 1; j < n; j++) {
+                dp[j] += dp[j - 1];               // 上方（旧 dp[j]）+ 左方（dp[j-1]）
+            }
+        }
+        return dp[n - 1];
+    }
+}
+// 时间复杂度 O(mn)，空间 O(n)。
+
+###0064
+// 思路：DP。f(i,j) = 到达 (i,j) 的最小路径和
+// = grid[i][j] + min(f(i-1,j), f(i,j-1))。第一行/列只能单向累加。
+class Solution {
+    public int minPathSum(int[][] grid) {
+        int m = grid.length, n = grid[0].length;
+        int[] dp = new int[n];
+        dp[0] = grid[0][0];
+        for (int j = 1; j < n; j++) {
+            dp[j] = dp[j - 1] + grid[0][j];       // 第一行只能从左来
+        }
+        for (int i = 1; i < m; i++) {
+            dp[0] += grid[i][0];                  // 第一列只能从上来
+            for (int j = 1; j < n; j++) {
+                dp[j] = Math.min(dp[j], dp[j - 1]) + grid[i][j]; // 上方 vs 左方
+            }
+        }
+        return dp[n - 1];
+    }
+}
+// 时间复杂度 O(mn)，空间 O(n)。
+
+###1143
+// 思路：经典二维 DP。f(i,j) = text1 前 i 个字符与 text2 前 j 个字符的 LCS 长度。
+// 末尾字符相等：f(i,j) = f(i-1,j-1) + 1；否则 f(i,j) = max(f(i-1,j), f(i,j-1))。
+class Solution {
+    public int longestCommonSubsequence(String text1, String text2) {
+        int m = text1.length(), n = text2.length();
+        int[] prev = new int[n + 1];              // f(i-1) 行
+        int[] cur = new int[n + 1];               // f(i) 行
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+                if (text1.charAt(i - 1) == text2.charAt(j - 1)) {
+                    cur[j] = prev[j - 1] + 1;     // 匹配：取对角线 + 1
+                } else {
+                    cur[j] = Math.max(prev[j], cur[j - 1]); // 不匹配：丢一个字符
+                }
+            }
+            int[] t = prev;
+            prev = cur;
+            cur = t;                              // 滚动交换两行
+        }
+        return prev[n];
+    }
+}
+// 时间复杂度 O(mn)，空间 O(n)。
+
+###0072
+// 思路：编辑距离，经典二维 DP。
+// f(i,j) = word1 前 i 个字符变成 word2 前 j 个字符的最少操作数。
+// 尾字符相等继承 f(i-1,j-1)；否则 = min(插入, 删除, 替换) + 1。
+class Solution {
+    public int minDistance(String word1, String word2) {
+        int m = word1.length(), n = word2.length();
+        int[] prev = new int[n + 1];
+        for (int j = 0; j <= n; j++) {
+            prev[j] = j;                          // 空串变成长度 j：插入 j 次
+        }
+        for (int i = 1; i <= m; i++) {
+            int[] cur = new int[n + 1];
+            cur[0] = i;                           // 长度 i 变空串：删除 i 次
+            for (int j = 1; j <= n; j++) {
+                if (word1.charAt(i - 1) == word2.charAt(j - 1)) {
+                    cur[j] = prev[j - 1];         // 尾字符相同，无操作
+                } else {
+                    // 替换 prev[j-1] / 删除 prev[j] / 插入 cur[j-1]
+                    cur[j] = Math.min(prev[j - 1],
+                            Math.min(prev[j], cur[j - 1])) + 1;
+                }
+            }
+            prev = cur;
+        }
+        return prev[n];
+    }
+}
+// 时间复杂度 O(mn)，空间 O(n)。
+
+###0005
+// 思路：中心扩展。回文以每个字符（奇数长度）或每对字符（偶数长度）为中心，
+// 向两侧扩展直到不匹配，记录最长结果。共 2n-1 个中心。
+class Solution {
+    public String longestPalindrome(String s) {
+        int start = 0, maxLen = 0;
+        for (int i = 0; i < s.length(); i++) {
+            int len1 = expand(s, i, i);           // 奇数长度，中心是一个字符
+            int len2 = expand(s, i, i + 1);       // 偶数长度，中心是两个字符之间
+            int len = Math.max(len1, len2);
+            if (len > maxLen) {
+                maxLen = len;
+                start = i - (len - 1) / 2;        // 由中心和长度反推起点
+            }
+        }
+        return s.substring(start, start + maxLen);
+    }
+
+    // 从 left、right 向两侧扩展，返回回文长度
+    private int expand(String s, int left, int right) {
+        while (left >= 0 && right < s.length()
+                && s.charAt(left) == s.charAt(right)) {
+            left--;
+            right++;
+        }
+        return right - left - 1;                  // 多走了一步，长度要减 2
+    }
+}
+// 时间复杂度 O(n^2)，空间 O(1)。
+
+###0136
+// 思路：异或。a ^ a = 0，a ^ 0 = a，且异或满足交换律结合律，
+// 全部数异或后，成对的互相抵消，只剩出现一次的那个数。
+class Solution {
+    public int singleNumber(int[] nums) {
+        int result = 0;
+        for (int x : nums) {
+            result ^= x;                          // 相同的数两两抵消
+        }
+        return result;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0169
+// 思路：Boyer-Moore 投票。候选者 cnt+1，遇到不同数 cnt-1，
+// cnt 归零时换候选。多数元素出现超过一半，最终候选一定是它。
+class Solution {
+    public int majorityElement(int[] nums) {
+        int candidate = 0, count = 0;
+        for (int x : nums) {
+            if (count == 0) {
+                candidate = x;                    // 票数归零，换候选
+                count = 1;
+            } else if (x == candidate) {
+                count++;                          // 同阵营 +1
+            } else {
+                count--;                          // 异阵营 -1
+            }
+        }
+        return candidate;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0075
+// 思路：荷兰国旗，三指针一趟扫描。
+// [0, zero) 全是 0，(two, n-1] 全是 2，中间是 1。
+// cur 遇 0 换到前区（zero++，cur++），遇 2 换到后区（two--，cur 不动，因为换来的未检查），
+// 遇 1 直接 cur++。
+class Solution {
+    public void sortColors(int[] nums) {
+        int zero = 0;                             // 下一个 0 应放的位置
+        int two = nums.length - 1;                // 下一个 2 应放的位置
+        int cur = 0;
+        while (cur <= two) {
+            if (nums[cur] == 0) {
+                swap(nums, cur, zero);
+                zero++;
+                cur++;                            // 换来的一定是 1（已检查区）
+            } else if (nums[cur] == 2) {
+                swap(nums, cur, two);
+                two--;
+                // cur 不动：从后面换来的元素还没检查
+            } else {
+                cur++;
+            }
+        }
+    }
+
+    private void swap(int[] nums, int i, int j) {
+        int t = nums[i];
+        nums[i] = nums[j];
+        nums[j] = t;
+    }
+}
+// 时间复杂度 O(n)（一趟扫描），空间 O(1)。
+
+###0031
+// 思路：字典序下一个排列的标准算法。
+// 1) 从右往左找第一个升序对 (i, i+1)，即 nums[i] < nums[i+1]；
+// 2) 再从右往左找第一个大于 nums[i] 的数 j，交换 i、j；
+// 3) 反转 i 后面的部分（此时其后仍是降序，反转得到最小排列）。
+class Solution {
+    public void nextPermutation(int[] nums) {
+        int n = nums.length;
+        int i = n - 2;
+        while (i >= 0 && nums[i] >= nums[i + 1]) {
+            i--;                                  // 从右找第一个升序的位置
+        }
+        if (i >= 0) {
+            int j = n - 1;
+            while (nums[j] <= nums[i]) {
+                j--;                              // 找第一个大于 nums[i] 的数
+            }
+            swap(nums, i, j);                     // 交换
+        }
+        // i 之后是降序，反转成升序得到最小排列
+        for (int l = i + 1, r = n - 1; l < r; l++, r--) {
+            swap(nums, l, r);
+        }
+    }
+
+    private void swap(int[] nums, int a, int b) {
+        int t = nums[a];
+        nums[a] = nums[b];
+        nums[b] = t;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0287
+// 思路：Floyd 判圈（把数组看成链表：i -> nums[i]）。
+// 由于有 n+1 个数取值 1..n，必有环，重复数字即环的入口。
+// 快慢指针相遇后，一个回到起点同速前进，再次相遇即重复数。
+class Solution {
+    public int findDuplicate(int[] nums) {
+        // 阶段一：快慢指针找环内相遇点
+        int slow = nums[0];
+        int fast = nums[nums[0]];
+        while (slow != fast) {
+            slow = nums[slow];                    // 每次一步
+            fast = nums[nums[fast]];              // 每次两步
+        }
+        // 阶段二：从起点出发，与慢指针同速前进，相遇处即入环口（重复数）
+        slow = 0;
+        while (slow != fast) {
+            slow = nums[slow];
+            fast = nums[fast];
+        }
+        return slow;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)，不修改数组。

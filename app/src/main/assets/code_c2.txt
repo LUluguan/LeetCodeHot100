@@ -1,0 +1,467 @@
+###0240
+// 思路：从右上角出发的阶梯搜索：大于 target 左移，小于 target 下移。
+#include <stdbool.h>
+
+bool searchMatrix(int** matrix, int matrixSize, int* matrixColSize, int target) {
+    int i = 0, j = matrixColSize[0] - 1;   // 右上角
+    while (i < matrixSize && j >= 0) {
+        if (matrix[i][j] == target) return true;
+        else if (matrix[i][j] > target) j--;   // 该列下方更大，排除该列
+        else i++;                              // 该行左边更小，排除该行
+    }
+    return false;
+}
+// 时间复杂度 O(m + n)，空间 O(1)。
+
+###0160
+// 思路：双指针浪漫相遇法：走完自己的链就从对面链头继续，
+// 两者路程相同（a+c+b 与 b+c+a），相交必在交点相遇，否则同时到 null。
+struct ListNode *getIntersectionNode(struct ListNode *headA, struct ListNode *headB) {
+    if (!headA || !headB) return NULL;
+    struct ListNode *pA = headA, *pB = headB;
+    while (pA != pB) {
+        pA = pA ? pA->next : headB;
+        pB = pB ? pB->next : headA;
+    }
+    return pA;
+}
+// 时间复杂度 O(m + n)，空间 O(1)。
+
+###0206
+// 思路：迭代三指针反转：保存 next，反指 prev，整体右移。
+struct ListNode* reverseList(struct ListNode* head) {
+    struct ListNode *prev = NULL, *cur = head;
+    while (cur) {
+        struct ListNode* next = cur->next;   // 先保存后面的链
+        cur->next = prev;                    // 反转当前指针
+        prev = cur;
+        cur = next;
+    }
+    return prev;                             // 新头节点
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0234
+// 思路：快慢指针找中点 -> 反转后半段 -> 前后半段逐节点比较。
+#include <stdbool.h>
+
+static struct ListNode* reverse(struct ListNode* head) {
+    struct ListNode *prev = NULL, *cur = head;
+    while (cur) {
+        struct ListNode* next = cur->next;
+        cur->next = prev;
+        prev = cur;
+        cur = next;
+    }
+    return prev;
+}
+
+bool isPalindrome(struct ListNode* head) {
+    if (!head || !head->next) return true;
+    struct ListNode *slow = head, *fast = head;
+    while (fast->next && fast->next->next) { // slow 停在前半段末尾
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+    struct ListNode *p1 = head, *p2 = reverse(slow->next);
+    while (p2) {                             // p2 是较短的一侧
+        if (p1->val != p2->val) return false;
+        p1 = p1->next;
+        p2 = p2->next;
+    }
+    return true;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0141
+// 思路：Floyd 快慢指针：有环必在环内相遇，无环 fast 先到 null。
+#include <stdbool.h>
+
+bool hasCycle(struct ListNode *head) {
+    struct ListNode *slow = head, *fast = head;
+    while (fast && fast->next) {
+        slow = slow->next;                   // 一次一步
+        fast = fast->next->next;             // 一次两步
+        if (slow == fast) return true;
+    }
+    return false;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0142
+// 思路：Floyd 两阶段：环内相遇后，一个指针回到头部，
+// 两个指针同速前进，再次相遇处即入环口（数学证明见 Java 版）。
+struct ListNode *detectCycle(struct ListNode *head) {
+    struct ListNode *slow = head, *fast = head;
+    while (fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
+        if (slow == fast) {                  // 阶段一：相遇
+            struct ListNode* p = head;
+            while (p != slow) {              // 阶段二：找入环口
+                p = p->next;
+                slow = slow->next;
+            }
+            return p;
+        }
+    }
+    return NULL;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0021
+// 思路：哑节点 + 归并式拼接，每次取两链中较小的头。
+struct ListNode* mergeTwoLists(struct ListNode* l1, struct ListNode* l2) {
+    struct ListNode dummy;                   // 栈上的哑节点即可
+    struct ListNode* cur = &dummy;
+    while (l1 && l2) {
+        if (l1->val <= l2->val) { cur->next = l1; l1 = l1->next; }
+        else { cur->next = l2; l2 = l2->next; }
+        cur = cur->next;
+    }
+    cur->next = l1 ? l1 : l2;                // 剩余部分直接接上
+    return dummy.next;
+}
+// 时间复杂度 O(m + n)，空间 O(1)。
+
+###0002
+// 思路：竖式加法：三条件循环（两链或进位还有残留都要生成新节点）。
+#include <stdlib.h>
+
+struct ListNode* addTwoNumbers(struct ListNode* l1, struct ListNode* l2) {
+    struct ListNode dummy;
+    struct ListNode* cur = &dummy;
+    int carry = 0;
+    while (l1 || l2 || carry) {
+        int sum = carry;
+        if (l1) { sum += l1->val; l1 = l1->next; }
+        if (l2) { sum += l2->val; l2 = l2->next; }
+        carry = sum / 10;
+        cur->next = malloc(sizeof(struct ListNode));
+        cur = cur->next;
+        cur->val = sum % 10;                 // 当前位
+        cur->next = NULL;
+    }
+    return dummy.next;
+}
+// 时间复杂度 O(max(m, n))，空间 O(1)（不计输出）。
+
+###0019
+// 思路：哑节点 + 快慢指针：fast 先走 n+1 步，fast 到 null 时 slow 在前驱上。
+#include <stdlib.h>
+
+struct ListNode* removeNthFromEnd(struct ListNode* head, int n) {
+    struct ListNode dummy;
+    dummy.next = head;
+    struct ListNode *fast = &dummy, *slow = &dummy;
+    for (int i = 0; i <= n; i++) fast = fast->next;
+    while (fast) {
+        fast = fast->next;
+        slow = slow->next;
+    }
+    slow->next = slow->next->next;           // 跳过被删节点
+    return dummy.next;
+}
+// 时间复杂度 O(L)，空间 O(1)。
+
+###0024
+// 思路：哑节点 + 每对交换：prev -> a -> b 改为 prev -> b -> a，prev 移到 a。
+struct ListNode* swapPairs(struct ListNode* head) {
+    struct ListNode dummy;
+    dummy.next = head;
+    struct ListNode* prev = &dummy;
+    while (prev->next && prev->next->next) {
+        struct ListNode *a = prev->next, *b = a->next;
+        a->next = b->next;
+        b->next = a;
+        prev->next = b;
+        prev = a;
+    }
+    return dummy.next;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0025
+// 思路：每组先检查够不够 k 个；组内反转时"尾"指向下一组开头，
+// 反转后前一组接新组头，prevGroup 更新为原组头（反转后的组尾）。
+struct ListNode* reverseKGroup(struct ListNode* head, int k) {
+    struct ListNode dummy;
+    dummy.next = head;
+    struct ListNode* prevGroup = &dummy;
+    while (1) {
+        struct ListNode* end = prevGroup;
+        for (int i = 0; i < k && end; i++) end = end->next;  // 够 k 个吗
+        if (!end) break;
+        struct ListNode* groupHead = prevGroup->next;
+        struct ListNode* nextGroup = end->next;
+        struct ListNode* prev = nextGroup;   // 反转后的尾指向下一组
+        struct ListNode* cur = groupHead;
+        while (cur != nextGroup) {
+            struct ListNode* next = cur->next;
+            cur->next = prev;
+            prev = cur;
+            cur = next;
+        }
+        prevGroup->next = end;               // 接上反转后的新头
+        prevGroup = groupHead;               // 本组反转后的尾
+    }
+    return dummy.next;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0138
+// 思路：节点插入法（O(1) 额外空间）：拷贝节点插到原节点后面，
+// 用 cur->random->next 找到拷贝的 random，最后拆成两条独立链。
+#include <stdlib.h>
+
+struct Node* copyRandomList(struct Node* head) {
+    if (!head) return NULL;
+    // 1) 每个节点后插入拷贝：A -> A' -> B -> B'
+    for (struct Node* cur = head; cur; cur = cur->next->next) {
+        struct Node* copy = malloc(sizeof(struct Node));
+        copy->val = cur->val;
+        copy->next = cur->next;
+        copy->random = NULL;
+        cur->next = copy;
+    }
+    // 2) 设置拷贝节点的 random
+    for (struct Node* cur = head; cur; cur = cur->next->next) {
+        if (cur->random) cur->next->random = cur->random->next;
+    }
+    // 3) 拆链：恢复原链，同时串起新链
+    struct Node dummy;
+    struct Node* tail = &dummy;
+    for (struct Node* cur = head; cur; cur = cur->next) {
+        struct Node* copy = cur->next;
+        cur->next = copy->next;              // 原链恢复
+        tail->next = copy;                   // 新链接入
+        tail = copy;
+    }
+    tail->next = NULL;
+    return dummy.next;
+}
+// 时间复杂度 O(n)，空间 O(1)（不计输出链表）。
+
+###0148
+// 思路：归并排序：快慢指针找中点断开 -> 递归排序两半 -> 合并两个有序链表。
+#include <stdlib.h>
+
+static struct ListNode* mergeTwo(struct ListNode* a, struct ListNode* b) {
+    struct ListNode dummy;
+    struct ListNode* cur = &dummy;
+    while (a && b) {
+        if (a->val <= b->val) { cur->next = a; a = a->next; }
+        else { cur->next = b; b = b->next; }
+        cur = cur->next;
+    }
+    cur->next = a ? a : b;
+    return dummy.next;
+}
+
+struct ListNode* sortList(struct ListNode* head) {
+    if (!head || !head->next) return head;
+    struct ListNode *slow = head, *fast = head->next;
+    while (fast && fast->next) {             // fast 从 head->next 出发，切分均衡
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+    struct ListNode* mid = slow->next;
+    slow->next = NULL;                       // 断开成两半
+    return mergeTwo(sortList(head), sortList(mid));
+}
+// 时间复杂度 O(n log n)，空间 O(log n)（递归栈）。
+
+###0023
+// 思路：分治两两合并（类似归并排序），每层工作量 O(n)，共 log k 层。
+#include <stdlib.h>
+
+static struct ListNode* mergeTwo(struct ListNode* a, struct ListNode* b) {
+    struct ListNode dummy;
+    struct ListNode* cur = &dummy;
+    while (a && b) {
+        if (a->val <= b->val) { cur->next = a; a = a->next; }
+        else { cur->next = b; b = b->next; }
+        cur = cur->next;
+    }
+    cur->next = a ? a : b;
+    return dummy.next;
+}
+
+static struct ListNode* mergeRange(struct ListNode** lists, int lo, int hi) {
+    if (lo == hi) return lists[lo];
+    int mid = (lo + hi) / 2;
+    return mergeTwo(mergeRange(lists, lo, mid), mergeRange(lists, mid + 1, hi));
+}
+
+struct ListNode* mergeKLists(struct ListNode** lists, int listsSize) {
+    if (listsSize == 0) return NULL;
+    return mergeRange(lists, 0, listsSize - 1);
+}
+// 时间复杂度 O(n log k)，空间 O(log k)。
+
+###0146
+// 思路：数组模拟双向链表 + 直接寻址哈希（key 范围 0..10^4，用数组下标映射）。
+// 下标 0 为哑头、1 为哑尾；map[key] 记录 key 对应的节点下标。
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_KEY 10001
+
+typedef struct {
+    int cap, cnt;
+    int* key;          // key[i]: 节点 i 的键
+    int* val;          // val[i]: 节点 i 的值
+    int* prev;         // 双向链表前驱下标
+    int* next;         // 双向链表后继下标
+    int* map;          // key -> 节点下标（-1 表示不存在）
+} LRUCache;
+
+static void detach(LRUCache* obj, int i) {           // 从链表摘除节点 i
+    obj->next[obj->prev[i]] = obj->next[i];
+    obj->prev[obj->next[i]] = obj->prev[i];
+}
+
+static void pushFront(LRUCache* obj, int i) {        // 插到哑头后（最近使用）
+    obj->next[i] = obj->next[0];
+    obj->prev[i] = 0;
+    obj->prev[obj->next[0]] = i;
+    obj->next[0] = i;
+}
+
+LRUCache* lRUCacheCreate(int capacity) {
+    LRUCache* obj = malloc(sizeof(LRUCache));
+    obj->cap = capacity;
+    obj->cnt = 0;
+    obj->key = malloc(sizeof(int) * (capacity + 2));
+    obj->val = malloc(sizeof(int) * (capacity + 2));
+    obj->prev = malloc(sizeof(int) * (capacity + 2));
+    obj->next = malloc(sizeof(int) * (capacity + 2));
+    obj->map = malloc(sizeof(int) * MAX_KEY);
+    memset(obj->map, -1, sizeof(int) * MAX_KEY);
+    obj->prev[0] = -1;
+    obj->next[0] = 1;                    // 哑头
+    obj->prev[1] = 0;
+    obj->next[1] = -1;                   // 哑尾
+    return obj;
+}
+
+int lRUCacheGet(LRUCache* obj, int key) {
+    int i = obj->map[key];
+    if (i == -1) return -1;
+    detach(obj, i);                      // 访问过就是"最近使用"，提到头部
+    pushFront(obj, i);
+    return obj->val[i];
+}
+
+void lRUCachePut(LRUCache* obj, int key, int value) {
+    int i = obj->map[key];
+    if (i != -1) {                       // 已存在：更新值并提到头部
+        obj->val[i] = value;
+        detach(obj, i);
+        pushFront(obj, i);
+        return;
+    }
+    if (obj->cnt == obj->cap) {          // 满了：淘汰哑尾的前一个（最久未用）
+        int lru = obj->prev[1];
+        obj->map[obj->key[lru]] = -1;
+        detach(obj, lru);
+        obj->cnt--;
+    }
+    obj->cnt++;
+    int fresh = obj->cnt + 1;            // 新节点下标（0、1 被哑节点占用）
+    obj->key[fresh] = key;
+    obj->val[fresh] = value;
+    obj->map[key] = fresh;
+    pushFront(obj, fresh);
+}
+
+void lRUCacheFree(LRUCache* obj) {
+    free(obj->key);
+    free(obj->val);
+    free(obj->prev);
+    free(obj->next);
+    free(obj->map);
+    free(obj);
+}
+// get 与 put 均为 O(1)，空间 O(capacity)。
+
+###0094
+// 思路：显式栈迭代中序：一路向左压栈，弹出访问，再转向右子树。
+#include <stdlib.h>
+
+int* inorderTraversal(struct TreeNode* root, int* returnSize) {
+    struct TreeNode* stack[105];         // 树最多 100 个节点
+    int top = 0;
+    int* res = malloc(sizeof(int) * 105);
+    *returnSize = 0;
+    struct TreeNode* cur = root;
+    while (cur || top > 0) {
+        while (cur) {                    // 一路向左
+            stack[top++] = cur;
+            cur = cur->left;
+        }
+        cur = stack[--top];              // 弹出最左节点
+        res[(*returnSize)++] = cur->val;
+        cur = cur->right;                // 转向右子树
+    }
+    return res;
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0104
+// 思路：递归：max(左深, 右深) + 1。
+int maxDepth(struct TreeNode* root) {
+    if (!root) return 0;
+    int l = maxDepth(root->left);
+    int r = maxDepth(root->right);
+    return (l > r ? l : r) + 1;
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0226
+// 思路：递归交换每个节点的左右子树。
+#include <stdlib.h>
+
+struct TreeNode* invertTree(struct TreeNode* root) {
+    if (!root) return NULL;
+    struct TreeNode* l = invertTree(root->left);
+    struct TreeNode* r = invertTree(root->right);
+    root->left = r;
+    root->right = l;
+    return root;
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0101
+// 思路：树对称 <=> 左右子树互为镜像：根值相等 + 外侧镜像 + 内侧镜像。
+#include <stdbool.h>
+
+static bool isMirror(struct TreeNode* a, struct TreeNode* b) {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    return a->val == b->val
+        && isMirror(a->left, b->right)
+        && isMirror(a->right, b->left);
+}
+
+bool isSymmetric(struct TreeNode* root) {
+    return !root || isMirror(root->left, root->right);
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0543
+// 思路：递归返回"向下最大深度"，同时用 ans 指针记录各节点 left+right 的最大值。
+static int depth(struct TreeNode* node, int* ans) {
+    if (!node) return 0;
+    int l = depth(node->left, ans);
+    int r = depth(node->right, ans);
+    if (l + r > *ans) *ans = l + r;      // 经过 node 的直径候选
+    return (l > r ? l : r) + 1;
+}
+
+int diameterOfBinaryTree(struct TreeNode* root) {
+    int ans = 0;
+    depth(root, &ans);
+    return ans;
+}
+// 时间复杂度 O(n)，空间 O(h)。

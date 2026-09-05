@@ -1,0 +1,585 @@
+###0102
+// 思路：BFS 层序遍历。队列每次存一整层，逐层弹出并把子节点加入下一层。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public List<List<Integer>> levelOrder(TreeNode root) {
+        List<List<Integer>> res = new ArrayList<>();
+        if (root == null) return res;
+
+        Queue<TreeNode> queue = new LinkedList<>();
+        queue.offer(root);
+        while (!queue.isEmpty()) {
+            int size = queue.size();              // 当前层的节点数
+            List<Integer> level = new ArrayList<>();
+            for (int i = 0; i < size; i++) {      // 一次处理完一整层
+                TreeNode node = queue.poll();
+                level.add(node.val);
+                if (node.left != null) queue.offer(node.left);
+                if (node.right != null) queue.offer(node.right);
+            }
+            res.add(level);
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0108
+// 思路：取有序数组中点作为根，左半部分递归建左子树，右半部分递归建右子树。
+// 中点分割天然保证左右子树高度平衡。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public TreeNode sortedArrayToBST(int[] nums) {
+        return build(nums, 0, nums.length - 1);
+    }
+
+    private TreeNode build(int[] nums, int left, int right) {
+        if (left > right) return null;
+        int mid = (left + right) / 2;             // 取中点当根
+        TreeNode node = new TreeNode(nums[mid]);
+        node.left = build(nums, left, mid - 1);   // 左半建左子树
+        node.right = build(nums, mid + 1, right); // 右半建右子树
+        return node;
+    }
+}
+// 时间复杂度 O(n)，空间 O(log n)（递归栈，不计输出树）。
+
+###0098
+// 思路：递归 + 上下界。每个节点的值必须落在开区间 (lower, upper) 内。
+// 传入左子树的节点上界为当前值，传入右子树的节点下界为当前值。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public boolean isValidBST(TreeNode root) {
+        return validate(root, Long.MIN_VALUE, Long.MAX_VALUE);
+    }
+
+    private boolean validate(TreeNode node, long lower, long upper) {
+        if (node == null) return true;
+        // 用 long 防止节点值恰好是 int 边界时的越界问题
+        if (node.val <= lower || node.val >= upper) return false;
+        return validate(node.left, lower, node.val)
+                && validate(node.right, node.val, upper);
+    }
+}
+// 时间复杂度 O(n)，空间 O(h)。
+// 另解：中序遍历必须严格递增。
+
+###0230
+// 思路：二叉搜索树的中序遍历是递增序列，第 k 个被访问的节点就是第 k 小。
+// 迭代中序，访问到第 k 个时直接返回，不用遍历完整棵树。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public int kthSmallest(TreeNode root, int k) {
+        Deque<TreeNode> stack = new ArrayDeque<>();
+        TreeNode cur = root;
+        while (cur != null || !stack.isEmpty()) {
+            while (cur != null) {                 // 一路向左
+                stack.push(cur);
+                cur = cur.left;
+            }
+            cur = stack.pop();
+            k--;
+            if (k == 0) return cur.val;           // 第 k 个弹出的即答案
+            cur = cur.right;
+        }
+        return -1;                                // 题目保证有解，不会到达
+    }
+}
+// 时间复杂度 O(H + k)，H 为树高；空间 O(H)。
+// 进阶：节点中维护左右子树节点数（序数统计树）可支持频繁修改。
+
+###0199
+// 思路：BFS 层序遍历，每层最后出队的节点就是该层最右侧可见节点。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public List<Integer> rightSideView(TreeNode root) {
+        List<Integer> res = new ArrayList<>();
+        if (root == null) return res;
+
+        Queue<TreeNode> queue = new LinkedList<>();
+        queue.offer(root);
+        while (!queue.isEmpty()) {
+            int size = queue.size();
+            for (int i = 0; i < size; i++) {
+                TreeNode node = queue.poll();
+                if (i == size - 1) {              // 本层最后一个
+                    res.add(node.val);
+                }
+                if (node.left != null) queue.offer(node.left);
+                if (node.right != null) queue.offer(node.right);
+            }
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。
+// 另解：DFS 根右左顺序，每层第一个到达的节点入结果。
+
+###0114
+// 思路：寻找前驱节点（O(1) 空间，Morris 思想）。
+// 对每个节点：若左子树存在，找到左子树的最右节点（前驱），
+// 把当前节点的右子树接到前驱的 right 上，再把整个左子树搬到右边、左指针置空。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public void flatten(TreeNode root) {
+        TreeNode cur = root;
+        while (cur != null) {
+            if (cur.left != null) {
+                // 1) 找左子树的最右节点（当前节点在先序下的前驱）
+                TreeNode predecessor = cur.left;
+                while (predecessor.right != null) {
+                    predecessor = predecessor.right;
+                }
+                // 2) 原右子树接到前驱的右边
+                predecessor.right = cur.right;
+                // 3) 左子树整体搬到右边，左指针置空
+                cur.right = cur.left;
+                cur.left = null;
+            }
+            cur = cur.right;                      // 继续处理下一个
+        }
+    }
+}
+// 时间复杂度 O(n)（每个节点的前驱查找摊还 O(1)），空间 O(1)。
+
+###0105
+// 思路：前序第一个元素是根；中序中根的位置把数组分成左右子树。
+// 用哈希表记录中序值->下标，避免每次线性查找。递归构造。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    private final Map<Integer, Integer> inorderIndex = new HashMap<>();
+    private int preIdx = 0;                       // 当前使用到的前序下标
+
+    public TreeNode buildTree(int[] preorder, int[] inorder) {
+        for (int i = 0; i < inorder.length; i++) {
+            inorderIndex.put(inorder[i], i);
+        }
+        return build(preorder, 0, inorder.length - 1);
+    }
+
+    // 用 preorder[preIdx..] 与 inorder[l..r] 构造子树
+    private TreeNode build(int[] preorder, int l, int r) {
+        if (l > r) return null;
+        int rootVal = preorder[preIdx++];         // 前序当前位即根
+        TreeNode root = new TreeNode(rootVal);
+        int mid = inorderIndex.get(rootVal);      // 中序中根的位置
+        // 先建左子树再建右子树，必须与 preIdx 的推进顺序一致
+        root.left = build(preorder, l, mid - 1);
+        root.right = build(preorder, mid + 1, r);
+        return root;
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0437
+// 思路：前缀和 + 回溯。pre_i - pre_ancestors = targetSum，
+// 用哈希表统计从根到当前节点路径上各前缀和出现次数，答案累加 map.get(pre - targetSum)。
+// 回溯时记得把当前前缀和的计数减一。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    private final Map<Long, Integer> count = new HashMap<>();
+    private int targetSum;
+
+    public int pathSum(TreeNode root, int targetSum) {
+        this.targetSum = targetSum;
+        count.put(0L, 1);                         // 空前缀：路径从根开始的情况
+        return dfs(root, 0L);
+    }
+
+    // cur：根到当前节点的前缀和
+    private int dfs(TreeNode node, long cur) {
+        if (node == null) return 0;
+        cur += node.val;
+        // 以当前节点结尾的、和为 targetSum 的路径数
+        int res = count.getOrDefault(cur - targetSum, 0);
+        count.merge(cur, 1, Integer::sum);        // 当前前缀和加入路径
+        res += dfs(node.left, cur);
+        res += dfs(node.right, cur);
+        count.merge(cur, -1, Integer::sum);       // 回溯：离开该子树前撤销
+        return res;
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。用 long 防止前缀和溢出。
+
+###0236
+// 思路：递归。后序遍历：
+// - 空节点返回 null；节点等于 p 或 q 返回自身。
+// - 左右子树各自找：两边都非空 -> 当前节点就是最近公共祖先；
+//   只有一边非空 -> 答案在那一边。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        if (root == null || root == p || root == q) {
+            return root;                          // 找到目标或走到底
+        }
+        TreeNode left = lowestCommonAncestor(root.left, p, q);
+        TreeNode right = lowestCommonAncestor(root.right, p, q);
+        if (left != null && right != null) {
+            return root;                          // p、q 分居两侧，root 即答案
+        }
+        return left != null ? left : right;       // 只在一侧
+    }
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0124
+// 思路：树形 DP。定义 f(node) = 从 node 出发向下延伸的最大路径和（至少含 node），
+// f = node.val + max(0, max(f(左), f(右)))，负贡献直接不要。
+// 全局答案 = 经过 node 的最大路径和 = node.val + max(0,f左) + max(0,f右)。
+// 树节点定义：class TreeNode { int val; TreeNode left; TreeNode right; }
+class Solution {
+    private int best = Integer.MIN_VALUE;
+
+    public int maxPathSum(TreeNode root) {
+        dfs(root);
+        return best;
+    }
+
+    private int dfs(TreeNode node) {
+        if (node == null) return 0;
+        int left = Math.max(0, dfs(node.left));   // 左子树贡献，负数取 0
+        int right = Math.max(0, dfs(node.right));
+        // 以 node 为"拐点"的路径和，用于更新全局答案
+        best = Math.max(best, node.val + left + right);
+        // 返回给父节点的只能选一侧
+        return node.val + Math.max(left, right);
+    }
+}
+// 时间复杂度 O(n)，空间 O(h)。
+
+###0200
+// 思路：遍历网格，遇到未访问的陆地 '1' 就岛屿数 +1，并用 DFS 沉岛（把整个连通块改成 '0'）。
+// 沉岛天然起到了"标记已访问"的作用。
+class Solution {
+    public int numIslands(char[][] grid) {
+        int count = 0;
+        for (int i = 0; i < grid.length; i++) {
+            for (int j = 0; j < grid[0].length; j++) {
+                if (grid[i][j] == '1') {
+                    count++;                      // 发现一个新岛屿
+                    dfs(grid, i, j);              // 沉没整个连通块
+                }
+            }
+        }
+        return count;
+    }
+
+    private void dfs(char[][] grid, int i, int j) {
+        // 越界或不是陆地则返回
+        if (i < 0 || i >= grid.length || j < 0 || j >= grid[0].length
+                || grid[i][j] != '1') {
+            return;
+        }
+        grid[i][j] = '0';                         // 标记已访问
+        dfs(grid, i + 1, j);                      // 上下左右扩散
+        dfs(grid, i - 1, j);
+        dfs(grid, i, j + 1);
+        dfs(grid, i, j - 1);
+    }
+}
+// 时间复杂度 O(mn)，空间 O(mn)（最坏递归深度）。
+
+###0994
+// 思路：多源 BFS。把所有腐烂橘子同时入队作为起点，逐层向外扩散，
+// 层数即为时间；新鲜橘子全部腐烂所需时间 = 最后扩散的层数。
+class Solution {
+    public int orangesRotting(int[][] grid) {
+        int m = grid.length, n = grid[0].length;
+        Queue<int[]> queue = new LinkedList<>();
+        int fresh = 0;                            // 剩余新鲜橘子数
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                if (grid[i][j] == 2) queue.offer(new int[]{i, j});
+                else if (grid[i][j] == 1) fresh++;
+            }
+        }
+        if (fresh == 0) return 0;                 // 没有新鲜橘子
+
+        int minutes = 0;
+        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        while (!queue.isEmpty() && fresh > 0) {
+            minutes++;                            // 一分钟一批扩散
+            int size = queue.size();
+            for (int s = 0; s < size; s++) {
+                int[] cur = queue.poll();
+                for (int[] d : dirs) {
+                    int ni = cur[0] + d[0], nj = cur[1] + d[1];
+                    if (ni < 0 || ni >= m || nj < 0 || nj >= n) continue;
+                    if (grid[ni][nj] == 1) {      // 新鲜橘子被感染
+                        grid[ni][nj] = 2;
+                        fresh--;
+                        queue.offer(new int[]{ni, nj});
+                    }
+                }
+            }
+        }
+        return fresh == 0 ? minutes : -1;         // 还有剩下的则不可能
+    }
+}
+// 时间复杂度 O(mn)，空间 O(mn)。
+
+###0207
+// 思路：拓扑排序（Kahn 算法 / BFS）。
+// 建邻接表和入度表；入度为 0 的课程先学，学完把后继课程入度减一，
+// 减到 0 就入队。最终学过的课程数等于总数则无环，可以完成。
+class Solution {
+    public boolean canFinish(int numCourses, int[][] prerequisites) {
+        List<List<Integer>> graph = new ArrayList<>(); // 边：b -> a（先修指向后修）
+        int[] indegree = new int[numCourses];
+        for (int i = 0; i < numCourses; i++) {
+            graph.add(new ArrayList<>());
+        }
+        for (int[] p : prerequisites) {
+            graph.get(p[1]).add(p[0]);
+            indegree[p[0]]++;                     // a 的先修课数量
+        }
+
+        Queue<Integer> queue = new LinkedList<>();
+        for (int i = 0; i < numCourses; i++) {
+            if (indegree[i] == 0) queue.offer(i); // 无先修的课可以先学
+        }
+
+        int taken = 0;
+        while (!queue.isEmpty()) {
+            int cur = queue.poll();
+            taken++;
+            for (int next : graph.get(cur)) {
+                indegree[next]--;                 // 学完 cur，next 少一门先修
+                if (indegree[next] == 0) {
+                    queue.offer(next);
+                }
+            }
+        }
+        return taken == numCourses;               // 全部学完 <=> 无环
+    }
+}
+// 时间复杂度 O(V + E)，空间 O(V + E)。
+
+###0208
+// 思路：多叉树，每个节点存 26 个子节点和一个"是否是单词结尾"的标志。
+// 插入/查找/前缀查找都沿着字符逐层向下。
+class Trie {
+    private final Trie[] children = new Trie[26]; // 26 个分支
+    private boolean isEnd = false;                // 是否为某个单词的结尾
+
+    public Trie() {
+    }
+
+    public void insert(String word) {
+        Trie node = this;
+        for (char c : word.toCharArray()) {
+            int idx = c - 'a';
+            if (node.children[idx] == null) {
+                node.children[idx] = new Trie();  // 路径不存在则新建
+            }
+            node = node.children[idx];
+        }
+        node.isEnd = true;                        // 标记单词结尾
+    }
+
+    public boolean search(String word) {
+        Trie node = find(word);
+        return node != null && node.isEnd;        // 必须是完整单词
+    }
+
+    public boolean startsWith(String prefix) {
+        return find(prefix) != null;              // 只要有路径就算前缀
+    }
+
+    // 沿字符向下走，返回终点节点；路径中断返回 null
+    private Trie find(String s) {
+        Trie node = this;
+        for (char c : s.toCharArray()) {
+            node = node.children[c - 'a'];
+            if (node == null) return null;
+        }
+        return node;
+    }
+}
+// 每次 insert/search/startsWith 为 O(L)，L 为字符串长度。
+
+###0046
+// 思路：回溯。path 记录当前排列，used 标记已使用的数字，
+// 每层从未使用的数字中选一个加入 path，path 长度等于 n 时收集答案并回溯。
+class Solution {
+    private final List<List<Integer>> res = new ArrayList<>();
+    private final List<Integer> path = new ArrayList<>();
+    private boolean[] used;
+
+    public List<List<Integer>> permute(int[] nums) {
+        used = new boolean[nums.length];
+        backtrack(nums);
+        return res;
+    }
+
+    private void backtrack(int[] nums) {
+        if (path.size() == nums.length) {
+            res.add(new ArrayList<>(path));       // 收集当前排列的拷贝
+            return;
+        }
+        for (int i = 0; i < nums.length; i++) {
+            if (used[i]) continue;                // 已在 path 中，跳过
+            used[i] = true;                       // 做选择
+            path.add(nums[i]);
+            backtrack(nums);                      // 进入下一层
+            path.remove(path.size() - 1);         // 撤销选择
+            used[i] = false;
+        }
+    }
+}
+// 时间复杂度 O(n * n!)（n! 个排列，每个拷贝 O(n)），空间 O(n)。
+
+###0078
+// 思路：回溯。每个位置二选一：选或不选。用 start 控制只向后选，天然去重。
+// 也可以理解为：每进入一层就把当前 path 加入答案。
+class Solution {
+    private final List<List<Integer>> res = new ArrayList<>();
+    private final List<Integer> path = new ArrayList<>();
+    private int[] nums;
+
+    public List<List<Integer>> subsets(int[] nums) {
+        this.nums = nums;
+        backtrack(0);
+        return res;
+    }
+
+    private void backtrack(int start) {
+        res.add(new ArrayList<>(path));           // 每个节点都是有效子集
+        for (int i = start; i < nums.length; i++) {
+            path.add(nums[i]);                    // 选择 nums[i]
+            backtrack(i + 1);                     // 只能选后面的，避免重复
+            path.remove(path.size() - 1);         // 撤销
+        }
+    }
+}
+// 时间复杂度 O(n * 2^n)（共 2^n 个子集），空间 O(n)。
+
+###0017
+// 思路：回溯。数字到字母的映射表，逐位选字母，选满 digits.length() 位即得到一个组合。
+class Solution {
+    private static final String[] MAP = {
+            "", "", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz"
+    };                                            // 下标 2~9 对应字母
+
+    private final List<String> res = new ArrayList<>();
+    private String digits;
+
+    public List<String> letterCombinations(String digits) {
+        this.digits = digits;
+        if (digits.isEmpty()) return res;         // 空输入返回空列表
+        backtrack(0, new StringBuilder());
+        return res;
+    }
+
+    private void backtrack(int idx, StringBuilder path) {
+        if (idx == digits.length()) {
+            res.add(path.toString());             // 凑齐所有位
+            return;
+        }
+        String letters = MAP[digits.charAt(idx) - '0'];
+        for (char c : letters.toCharArray()) {
+            path.append(c);                       // 做选择
+            backtrack(idx + 1, path);             // 处理下一位
+            path.deleteCharAt(path.length() - 1); // 撤销
+        }
+    }
+}
+// 时间复杂度 O(4^n * n)（最坏每位 4 个字母），空间 O(n)。
+
+###0039
+// 思路：回溯 + 剪枝。先排序，同一层从 start 开始选（允许重复选自己，所以递归传 i），
+// 剩余目标小于当前数时剪枝（排序后后面只会更大）。
+class Solution {
+    private final List<List<Integer>> res = new ArrayList<>();
+    private final List<Integer> path = new ArrayList<>();
+
+    public List<List<Integer>> combinationSum(int[] candidates, int target) {
+        Arrays.sort(candidates);                  // 排序便于剪枝
+        backtrack(candidates, target, 0);
+        return res;
+    }
+
+    private void backtrack(int[] candidates, int remain, int start) {
+        if (remain == 0) {
+            res.add(new ArrayList<>(path));       // 恰好凑出 target
+            return;
+        }
+        for (int i = start; i < candidates.length; i++) {
+            if (candidates[i] > remain) break;    // 剪枝：后面的更大，直接结束本层
+            path.add(candidates[i]);
+            backtrack(candidates, remain - candidates[i], i); // i 不变，可重复选
+            path.remove(path.size() - 1);
+        }
+    }
+}
+// 时间复杂度 O(n * 2^target)（上界），空间 O(target)。
+
+###0022
+// 思路：回溯。在任何时刻：已用的左括号数不超过 n，右括号数不超过已用左括号数。
+// 用 open、close 计数控制每一步的合法选择。
+class Solution {
+    private final List<String> res = new ArrayList<>();
+    private int n;
+
+    public List<String> generateParenthesis(int n) {
+        this.n = n;
+        backtrack(new StringBuilder(), 0, 0);
+        return res;
+    }
+
+    private void backtrack(StringBuilder path, int open, int close) {
+        if (path.length() == 2 * n) {
+            res.add(path.toString());             // 长度足够，收集答案
+            return;
+        }
+        if (open < n) {                           // 还能放左括号
+            path.append('(');
+            backtrack(path, open + 1, close);
+            path.deleteCharAt(path.length() - 1);
+        }
+        if (close < open) {                       // 右括号必须少于已用左括号才合法
+            path.append(')');
+            backtrack(path, open, close + 1);
+            path.deleteCharAt(path.length() - 1);
+        }
+    }
+}
+// 结果为卡特兰数 C(2n, n)/(n+1) 个，时间复杂度 O(4^n / sqrt(n))，空间 O(n)。
+
+###0079
+// 思路：回溯。从每个格子尝试作为起点，向四个方向匹配 word，
+// 走过的格子临时改成 '#' 防止重复使用，回溯时还原。
+class Solution {
+    private int m, n;
+    private String word;
+
+    public boolean exist(char[][] board, String word) {
+        m = board.length;
+        n = board[0].length;
+        this.word = word;
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                if (dfs(board, i, j, 0)) return true;
+            }
+        }
+        return false;
+    }
+
+    // 从 (i, j) 出发匹配 word[k..]
+    private boolean dfs(char[][] board, int i, int j, int k) {
+        if (i < 0 || i >= m || j < 0 || j >= n
+                || board[i][j] != word.charAt(k)) {
+            return false;                         // 越界或字符不匹配
+        }
+        if (k == word.length() - 1) return true;  // 全部匹配完成
+
+        board[i][j] = '#';                        // 标记已访问
+        boolean found = dfs(board, i + 1, j, k + 1)
+                || dfs(board, i - 1, j, k + 1)
+                || dfs(board, i, j + 1, k + 1)
+                || dfs(board, i, j - 1, k + 1);
+        board[i][j] = word.charAt(k);             // 回溯还原
+        return found;
+    }
+}
+// 时间复杂度 O(mn * 3^L)（L 为单词长度，每步最多 3 个方向），空间 O(L)。

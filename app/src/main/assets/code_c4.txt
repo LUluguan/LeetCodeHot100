@@ -1,0 +1,601 @@
+###0131
+// 思路：回文 DP 预处理（isPal[i][j]: s[i..j] 是否回文）+ 回溯分割。
+// 结果组数无法预知，动态扩容。
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+static char*** g_res;
+static int* g_cols;
+static int g_cnt, g_cap, g_len;
+static char** g_path;
+static int g_pathLen;
+static bool isPal[16][16];
+
+static void pushRow(void) {
+    if (g_cnt == g_cap) {                    // 扩容
+        g_cap *= 2;
+        g_res = realloc(g_res, sizeof(char**) * g_cap);
+        g_cols = realloc(g_cols, sizeof(int) * g_cap);
+    }
+    g_res[g_cnt] = malloc(sizeof(char*) * g_pathLen);
+    for (int i = 0; i < g_pathLen; i++) g_res[g_cnt][i] = strdup(g_path[i]);
+    g_cols[g_cnt] = g_pathLen;
+    g_cnt++;
+}
+
+static void backtrack(char* s, int start) {
+    if (start == g_len) {
+        pushRow();
+        return;
+    }
+    for (int end = start; end < g_len; end++) {
+        if (!isPal[start][end]) continue;    // s[start..end] 必须是回文
+        int len = end - start + 1;
+        memcpy(g_path[g_pathLen], s + start, len);
+        g_path[g_pathLen][len] = '\0';
+        g_pathLen++;
+        backtrack(s, end + 1);
+        g_pathLen--;
+    }
+}
+
+char*** partition(char* s, int* returnSize, int** returnColumnSizes) {
+    g_len = strlen(s);
+    int n = g_len;
+    // 区间 DP：isPal[i][j] = (s[i]==s[j]) && (长度<2 || 内部回文)
+    for (int i = n - 1; i >= 0; i--)
+        for (int j = i; j < n; j++)
+            isPal[i][j] = (s[i] == s[j]) && (j - i < 2 || isPal[i + 1][j - 1]);
+    g_cap = 16;
+    g_cnt = 0;
+    g_pathLen = 0;
+    g_res = malloc(sizeof(char**) * g_cap);
+    g_cols = malloc(sizeof(int) * g_cap);
+    g_path = malloc(sizeof(char*) * n);
+    for (int i = 0; i < n; i++) g_path[i] = malloc(n + 1);
+    backtrack(s, 0);
+    *returnSize = g_cnt;
+    *returnColumnSizes = g_cols;
+    return g_res;
+}
+// 时间复杂度 O(n·2^n)，空间 O(n^2)。
+
+###0051
+// 思路：逐行回溯。usedCol 查列，usedD1（r-c+9）、usedD2（r+c）查两条对角线。
+// n <= 9，解最多 352 个。
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+static char*** g_res;
+static int* g_cols;
+static int g_cnt, g_n;
+static int g_queens[9];                      // g_queens[r] = 第 r 行皇后的列
+static bool usedCol[9], usedD1[20], usedD2[20];
+
+static void backtrack(int row) {
+    if (row == g_n) {
+        g_res[g_cnt] = malloc(sizeof(char*) * g_n);
+        for (int r = 0; r < g_n; r++) {
+            g_res[g_cnt][r] = malloc(g_n + 1);
+            for (int c = 0; c < g_n; c++)
+                g_res[g_cnt][r][c] = (c == g_queens[r]) ? 'Q' : '.';
+            g_res[g_cnt][r][g_n] = '\0';
+        }
+        g_cols[g_cnt] = g_n;
+        g_cnt++;
+        return;
+    }
+    for (int c = 0; c < g_n; c++) {
+        if (usedCol[c] || usedD1[row - c + 9] || usedD2[row + c]) continue;
+        g_queens[row] = c;
+        usedCol[c] = usedD1[row - c + 9] = usedD2[row + c] = true;
+        backtrack(row + 1);
+        usedCol[c] = usedD1[row - c + 9] = usedD2[row + c] = false;
+    }
+}
+
+char*** solveNQueens(int n, int* returnSize, int** returnColumnSizes) {
+    g_n = n;
+    g_cnt = 0;
+    g_res = malloc(sizeof(char**) * 400);    // n=9 时最多 352 个解
+    g_cols = malloc(sizeof(int) * 400);
+    memset(usedCol, 0, sizeof(usedCol));
+    memset(usedD1, 0, sizeof(usedD1));
+    memset(usedD2, 0, sizeof(usedD2));
+    backtrack(0);
+    *returnSize = g_cnt;
+    *returnColumnSizes = g_cols;
+    return g_res;
+}
+// 时间复杂度 O(n!)，空间 O(n)。
+
+###0035
+// 思路：标准二分；找不到时 left 停在"第一个大于 target 的位置"，即插入点。
+int searchInsert(int* nums, int numsSize, int target) {
+    int left = 0, right = numsSize - 1;
+    while (left <= right) {
+        int mid = (left + right) / 2;
+        if (nums[mid] == target) return mid;
+        else if (nums[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return left;
+}
+// 时间复杂度 O(log n)，空间 O(1)。
+
+###0074
+// 思路：把矩阵看成长度 m*n 的一维有序数组做二分，
+// 一维下标换算：row = mid / n，col = mid % n。
+#include <stdbool.h>
+
+bool searchMatrix(int** matrix, int matrixSize, int* matrixColSize, int target) {
+    int m = matrixSize, n = matrixColSize[0];
+    int lo = 0, hi = m * n - 1;
+    while (lo <= hi) {
+        int mid = (lo + hi) / 2;
+        int val = matrix[mid / n][mid % n];
+        if (val == target) return true;
+        else if (val < target) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return false;
+}
+// 时间复杂度 O(log(mn))，空间 O(1)。
+
+###0034
+// 思路：两次"第一个 >= target"的二分（lowerBound）定位左右边界。
+#include <stdlib.h>
+
+static int lowerBound(int* nums, int numsSize, int target) {
+    int lo = 0, hi = numsSize;               // 半开区间 [lo, hi)
+    while (lo < hi) {
+        int mid = (lo + hi) / 2;
+        if (nums[mid] >= target) hi = mid;
+        else lo = mid + 1;
+    }
+    return lo;
+}
+
+int* searchRange(int* nums, int numsSize, int target, int* returnSize) {
+    int* res = malloc(sizeof(int) * 2);
+    *returnSize = 2;
+    int first = lowerBound(nums, numsSize, target);
+    if (first == numsSize || nums[first] != target) {
+        res[0] = -1;
+        res[1] = -1;
+        return res;
+    }
+    res[0] = first;
+    res[1] = lowerBound(nums, numsSize, target + 1) - 1;   // 第一个 > target 的前一个
+    return res;
+}
+// 时间复杂度 O(log n)，空间 O(1)。
+
+###0033
+// 思路：mid 切开后至少一半有序；在有序的一半里做值域判断决定收缩方向。
+int search(int* nums, int numsSize, int target) {
+    int left = 0, right = numsSize - 1;
+    while (left <= right) {
+        int mid = (left + right) / 2;
+        if (nums[mid] == target) return mid;
+        if (nums[left] <= nums[mid]) {                       // 左半有序
+            if (nums[left] <= target && target < nums[mid]) right = mid - 1;
+            else left = mid + 1;
+        } else {                                             // 右半有序
+            if (nums[mid] < target && target <= nums[right]) left = mid + 1;
+            else right = mid - 1;
+        }
+    }
+    return -1;
+}
+// 时间复杂度 O(log n)，空间 O(1)。
+
+###0153
+// 思路：与右端点比较：nums[mid] > nums[right] 说明最小值在 mid 右侧。
+int findMin(int* nums, int numsSize) {
+    int left = 0, right = numsSize - 1;
+    while (left < right) {
+        int mid = (left + right) / 2;
+        if (nums[mid] > nums[right]) left = mid + 1;
+        else right = mid;                    // mid 可能就是最小值
+    }
+    return nums[left];
+}
+// 时间复杂度 O(log n)，空间 O(1)。
+
+###0004
+// 思路：中位数分割线二分：在短数组上枚举其贡献 i 个，长数组自动贡献 leftHalf-i 个，
+// 用 ±∞ 处理边界，交叉比较四条边界判断分割合法性。
+#include <limits.h>
+
+double findMedianSortedArrays(int* nums1, int nums1Size, int* nums2, int nums2Size) {
+    if (nums1Size > nums2Size) {             // 保证在短数组上二分
+        int* tp = nums1; nums1 = nums2; nums2 = tp;
+        int ts = nums1Size; nums1Size = nums2Size; nums2Size = ts;
+    }
+    int m = nums1Size, n = nums2Size;
+    int leftHalf = (m + n + 1) / 2;          // 中位数左侧需要的元素数
+    int lo = 0, hi = m;
+    while (lo <= hi) {
+        int i = (lo + hi) / 2;               // nums1 贡献 i 个
+        int j = leftHalf - i;                // nums2 贡献 j 个
+        int iL = (i == 0) ? INT_MIN : nums1[i - 1];
+        int iR = (i == m) ? INT_MAX : nums1[i];
+        int jL = (j == 0) ? INT_MIN : nums2[j - 1];
+        int jR = (j == n) ? INT_MAX : nums2[j];
+        if (iL <= jR && jL <= iR) {          // 合法分割
+            if ((m + n) % 2 == 1) return (double)(iL > jL ? iL : jL);
+            int loMax = iL > jL ? iL : jL;
+            int rMin = iR < jR ? iR : jR;
+            return (loMax + rMin) / 2.0;
+        } else if (iL > jR) hi = i - 1;      // nums1 拿多了
+        else lo = i + 1;                     // nums1 拿少了
+    }
+    return 0;                                // 输入保证有序，不会到达
+}
+// 时间复杂度 O(log(min(m, n)))，空间 O(1)。
+
+###0020
+// 思路：数组模拟栈：左括号入栈，右括号弹出栈顶检查配对。
+#include <stdbool.h>
+
+bool isValid(char* s) {
+    char stack[10005];
+    int top = 0;
+    for (char* p = s; *p; p++) {
+        if (*p == '(' || *p == '[' || *p == '{') {
+            stack[top++] = *p;
+        } else {
+            if (top == 0) return false;      // 无左括号可配
+            char open = stack[--top];
+            if ((*p == ')' && open != '(')
+                || (*p == ']' && open != '[')
+                || (*p == '}' && open != '{')) return false;
+        }
+    }
+    return top == 0;                         // 有剩余左括号也无效
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0155
+// 思路：辅助栈 mins 同步维护：mins[i] = 前 i+1 个元素中的最小值。
+#include <stdlib.h>
+
+#define MAXOP 30005
+
+typedef struct {
+    int data[MAXOP];
+    int mins[MAXOP];
+    int top;
+} MinStack;
+
+MinStack* minStackCreate() {
+    MinStack* obj = malloc(sizeof(MinStack));
+    obj->top = 0;
+    return obj;
+}
+
+void minStackPush(MinStack* obj, int val) {
+    // 新最小值 = min(压入值, 当前最小值)
+    obj->mins[obj->top] = (obj->top > 0 && obj->mins[obj->top - 1] < val)
+                          ? obj->mins[obj->top - 1] : val;
+    obj->data[obj->top] = val;
+    obj->top++;
+}
+
+void minStackPop(MinStack* obj) { obj->top--; }
+
+int minStackTop(MinStack* obj) { return obj->data[obj->top - 1]; }
+
+int minStackGetMin(MinStack* obj) { return obj->mins[obj->top - 1]; }
+
+void minStackFree(MinStack* obj) { free(obj); }
+// 所有操作 O(1)。
+
+###0394
+// 思路：递归解码：读到数字 n 后跳过 '['，递归解析到匹配的 ']'，重复 n 次拷贝。
+// 输入串长 <= 30，缓冲区按输出上界分配。
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+
+static int g_pos;
+
+static void parse(char* s, char* out, int* outLen) {
+    while (s[g_pos] && s[g_pos] != ']') {
+        if (isdigit((unsigned char)s[g_pos])) {
+            int num = 0;
+            while (isdigit((unsigned char)s[g_pos]))
+                num = num * 10 + (s[g_pos++] - '0');
+            g_pos++;                         // 跳过 '['
+            char* inner = malloc(100000);    // 内层解码结果
+            int innerLen = 0;
+            parse(s, inner, &innerLen);
+            g_pos++;                         // 跳过 ']'
+            for (int i = 0; i < num; i++) {  // 重复 num 次
+                memcpy(out + *outLen, inner, innerLen);
+                *outLen += innerLen;
+            }
+            free(inner);
+        } else {
+            out[(*outLen)++] = s[g_pos++];   // 普通字母
+        }
+    }
+}
+
+char* decodeString(char* s) {
+    g_pos = 0;
+    char* res = calloc(100000, 1);
+    int len = 0;
+    parse(s, res, &len);
+    return res;
+}
+// 时间复杂度 O(输出长度)，空间同。
+
+###0739
+// 思路：单调递减栈（存下标）：今天温度更高时，栈里所有更冷的日子都能结算。
+#include <stdlib.h>
+
+int* dailyTemperatures(int* temperatures, int temperaturesSize, int* returnSize) {
+    int* stack = malloc(sizeof(int) * temperaturesSize);
+    int top = 0;
+    int* res = calloc(temperaturesSize, sizeof(int));   // 默认 0
+    *returnSize = temperaturesSize;
+    for (int i = 0; i < temperaturesSize; i++) {
+        while (top > 0 && temperatures[i] > temperatures[stack[top - 1]]) {
+            int prev = stack[--top];
+            res[prev] = i - prev;            // 相隔天数
+        }
+        stack[top++] = i;
+    }
+    return res;
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0084
+// 思路：单调递增栈 + 末尾哨兵 0：弹出柱子时左右边界同时确定，结算矩形面积。
+#include <stdlib.h>
+#include <string.h>
+
+int largestRectangleArea(int* heights, int heightsSize) {
+    int* h = malloc(sizeof(int) * (heightsSize + 1));
+    memcpy(h, heights, sizeof(int) * heightsSize);
+    h[heightsSize] = 0;                      // 哨兵：逼出栈内所有柱子
+    int* stack = malloc(sizeof(int) * (heightsSize + 1));
+    int top = 0, best = 0;
+    for (int i = 0; i <= heightsSize; i++) {
+        while (top > 0 && h[i] < h[stack[top - 1]]) {
+            int height = h[stack[--top]];
+            int left = (top > 0) ? stack[top - 1] : -1;  // 左边界
+            int width = i - left - 1;
+            if (height * width > best) best = height * width;
+        }
+        stack[top++] = i;
+    }
+    return best;
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0215
+// 思路：随机基准快速选择：partition 后只在包含目标的一侧继续，平均 O(n)。
+#include <stdlib.h>
+
+static void swapInt(int* a, int* b) {
+    int t = *a;
+    *a = *b;
+    *b = t;
+}
+
+static int partition(int* nums, int lo, int hi) {
+    int pivot = lo + rand() % (hi - lo + 1); // 随机基准，防退化
+    swapInt(&nums[pivot], &nums[hi]);
+    int i = lo;
+    for (int j = lo; j < hi; j++) {
+        if (nums[j] < nums[hi]) {            // 小于基准的换到左边
+            swapInt(&nums[i], &nums[j]);
+            i++;
+        }
+    }
+    swapInt(&nums[i], &nums[hi]);            // 基准归位
+    return i;
+}
+
+int findKthLargest(int* nums, int numsSize, int k) {
+    int target = numsSize - k;               // 升序后第 k 大的下标
+    int lo = 0, hi = numsSize - 1;
+    while (1) {
+        int p = partition(nums, lo, hi);
+        if (p == target) return nums[p];
+        else if (p < target) lo = p + 1;
+        else hi = p - 1;
+    }
+}
+// 平均时间 O(n)，空间 O(1)。
+
+###0347
+// 思路：排序后统计每个数出现次数，再按次数降序排序取前 k。
+// C 中排序版为 O(n log n)；严格 O(n) 的桶排思路见 Java/Python 版。
+#include <stdlib.h>
+
+typedef struct {
+    int val, freq;
+} Pair;
+
+static int cmpPair(const void* a, const void* b) {
+    return ((const Pair*)b)->freq - ((const Pair*)a)->freq;   // 次数降序
+}
+
+static int cmpIntAsc(const void* a, const void* b) {
+    int x = *(const int*)a, y = *(const int*)b;
+    return (x > y) - (x < y);
+}
+
+int* topKFrequent(int* nums, int numsSize, int k, int* returnSize) {
+    qsort(nums, numsSize, sizeof(int), cmpIntAsc);
+    Pair* pairs = malloc(sizeof(Pair) * numsSize);
+    int cnt = 0;
+    for (int i = 0; i < numsSize; ) {
+        int j = i;
+        while (j < numsSize && nums[j] == nums[i]) j++;
+        pairs[cnt].val = nums[i];
+        pairs[cnt].freq = j - i;
+        cnt++;
+        i = j;
+    }
+    qsort(pairs, cnt, sizeof(Pair), cmpPair);
+    int* res = malloc(sizeof(int) * k);
+    *returnSize = k;
+    for (int i = 0; i < k; i++) res[i] = pairs[i].val;
+    return res;
+}
+// 时间复杂度 O(n log n)，空间 O(n)。
+
+###0295
+// 思路：对顶堆。C 手写两个二叉堆：大根堆 small 存较小一半，小根堆 large 存较大一半。
+#include <stdlib.h>
+
+typedef struct {
+    int small[50005];
+    int smallSize;                           // 大根堆
+    int large[50005];
+    int largeSize;                           // 小根堆
+} MedianFinder;
+
+static void smallPush(MedianFinder* obj, int val) {      // 大根堆插入
+    int i = obj->smallSize++;
+    obj->small[i] = val;
+    while (i > 0) {                          // 上浮
+        int p = (i - 1) / 2;
+        if (obj->small[p] >= obj->small[i]) break;
+        int t = obj->small[p]; obj->small[p] = obj->small[i]; obj->small[i] = t;
+        i = p;
+    }
+}
+
+static int smallPop(MedianFinder* obj) {                 // 大根堆弹出堆顶
+    int top = obj->small[0];
+    obj->small[0] = obj->small[--obj->smallSize];
+    int i = 0;
+    while (1) {                              // 下沉
+        int l = 2 * i + 1, r = l + 1, big = i;
+        if (l < obj->smallSize && obj->small[l] > obj->small[big]) big = l;
+        if (r < obj->smallSize && obj->small[r] > obj->small[big]) big = r;
+        if (big == i) break;
+        int t = obj->small[i]; obj->small[i] = obj->small[big]; obj->small[big] = t;
+        i = big;
+    }
+    return top;
+}
+
+static void largePush(MedianFinder* obj, int val) {      // 小根堆插入
+    int i = obj->largeSize++;
+    obj->large[i] = val;
+    while (i > 0) {
+        int p = (i - 1) / 2;
+        if (obj->large[p] <= obj->large[i]) break;
+        int t = obj->large[p]; obj->large[p] = obj->large[i]; obj->large[i] = t;
+        i = p;
+    }
+}
+
+static int largePop(MedianFinder* obj) {                 // 小根堆弹出堆顶
+    int top = obj->large[0];
+    obj->large[0] = obj->large[--obj->largeSize];
+    int i = 0;
+    while (1) {
+        int l = 2 * i + 1, r = l + 1, min = i;
+        if (l < obj->largeSize && obj->large[l] < obj->large[min]) min = l;
+        if (r < obj->largeSize && obj->large[r] < obj->large[min]) min = r;
+        if (min == i) break;
+        int t = obj->large[i]; obj->large[i] = obj->large[min]; obj->large[min] = t;
+        i = min;
+    }
+    return top;
+}
+
+MedianFinder* medianFinderCreate() {
+    return calloc(1, sizeof(MedianFinder));
+}
+
+void medianFinderAddNum(MedianFinder* obj, int num) {
+    smallPush(obj, num);
+    largePush(obj, smallPop(obj));           // 把 small 的最大值挪给 large
+    if (obj->largeSize > obj->smallSize)     // 平衡：small 保持 >= large
+        smallPush(obj, largePop(obj));
+}
+
+double medianFinderFindMedian(MedianFinder* obj) {
+    if (obj->smallSize > obj->largeSize) return (double)obj->small[0];
+    return (obj->small[0] + obj->large[0]) / 2.0;
+}
+
+void medianFinderFree(MedianFinder* obj) { free(obj); }
+// addNum O(log n)，findMedian O(1)。
+
+###0121
+// 思路：一次遍历维护历史最低价，"今天卖出"更新最大利润。
+int maxProfit(int* prices, int pricesSize) {
+    int minPrice = 0x7fffffff;               // 到今天为止的最低价
+    int best = 0;
+    for (int i = 0; i < pricesSize; i++) {
+        if (prices[i] < minPrice) minPrice = prices[i];
+        else if (prices[i] - minPrice > best) best = prices[i] - minPrice;
+    }
+    return best;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0055
+// 思路：贪心维护最远可达下标 maxReach；i > maxReach 说明到不了。
+#include <stdbool.h>
+
+bool canJump(int* nums, int numsSize) {
+    int maxReach = 0;
+    for (int i = 0; i < numsSize; i++) {
+        if (i > maxReach) return false;      // 位置 i 不可达
+        if (i + nums[i] > maxReach) maxReach = i + nums[i];
+        if (maxReach >= numsSize - 1) return true;   // 已能到最后
+    }
+    return true;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0045
+// 思路：贪心分层（隐式 BFS）：currentEnd 是本跳边界，
+// 扫描中记录 farthest，走到边界时步数 +1。只扫到 n-2。
+int jump(int* nums, int numsSize) {
+    int steps = 0, currentEnd = 0, farthest = 0;
+    for (int i = 0; i < numsSize - 1; i++) {
+        if (i + nums[i] > farthest) farthest = i + nums[i];
+        if (i == currentEnd) {               // 必须再跳一次
+            steps++;
+            currentEnd = farthest;
+        }
+    }
+    return steps;
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0763
+// 思路：先记录每个字母最后出现的位置；扫描时延伸片段终点，
+// i 到达终点时切分一段。
+#include <stdlib.h>
+
+int* partitionLabels(char* s, int* returnSize) {
+    int last[26] = {0};
+    for (int i = 0; s[i]; i++) last[s[i] - 'a'] = i;     // 最后出现位置
+    int* res = malloc(sizeof(int) * 26);
+    *returnSize = 0;
+    int start = 0, end = 0;
+    for (int i = 0; s[i]; i++) {
+        if (last[s[i] - 'a'] > end) end = last[s[i] - 'a'];
+        if (i == end) {                      // 当前位置就是片段终点
+            res[(*returnSize)++] = i - start + 1;
+            start = i + 1;
+        }
+    }
+    return res;
+}
+// 时间复杂度 O(n)，空间 O(26)。

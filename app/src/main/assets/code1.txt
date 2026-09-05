@@ -1,0 +1,518 @@
+###0001
+// 思路：用哈希表记录"数值 -> 下标"。
+// 遍历数组，对每个数 x 查找 target - x 是否出现过；出现过即找到答案。
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        // key: 数值, value: 该数值的下标
+        Map<Integer, Integer> map = new HashMap<>();
+        for (int i = 0; i < nums.length; i++) {
+            int need = target - nums[i];          // 需要配对的另一个数
+            if (map.containsKey(need)) {
+                return new int[]{map.get(need), i}; // 之前出现过，直接返回
+            }
+            map.put(nums[i], i);                  // 记录当前数，供后面的数配对
+        }
+        return new int[0]; // 题目保证有解，不会走到这里
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(n)。
+
+###0049
+// 思路：字母异位词排序后字符串相同，用它作为哈希表的 key 分组。
+class Solution {
+    public List<List<String>> groupAnagrams(String[] strs) {
+        // key: 排序后的字符串（如 "aet"），value: 同一组异位词
+        Map<String, List<String>> map = new HashMap<>();
+        for (String s : strs) {
+            char[] arr = s.toCharArray();
+            Arrays.sort(arr);                     // 排序后成为该组的统一标识
+            String key = new String(arr);
+            // 不存在该组则新建列表
+            map.computeIfAbsent(key, k -> new ArrayList<>()).add(s);
+        }
+        return new ArrayList<>(map.values());
+    }
+}
+// 时间复杂度 O(n * k log k)，k 为字符串平均长度；空间 O(n * k)。
+// 进阶：也可以用 26 位字母计数数组转成字符串做 key，避免排序。
+
+###0128
+// 思路：哈希集合去重 + 只从"连续序列起点"开始数。
+// x 是起点当且仅当 x-1 不在集合中，这样每个序列只被遍历一次，总复杂度 O(n)。
+class Solution {
+    public int longestConsecutive(int[] nums) {
+        Set<Integer> set = new HashSet<>();
+        for (int x : nums) set.add(x);            // 去重
+
+        int best = 0;
+        for (int x : set) {                       // 遍历集合而不是数组，避免重复元素
+            if (set.contains(x - 1)) continue;    // x 不是序列起点，跳过
+            int len = 1;                          // x 是起点，开始向后数
+            while (set.contains(x + len)) len++;
+            best = Math.max(best, len);
+        }
+        return best;
+    }
+}
+// 时间复杂度 O(n)：每个数最多被访问两次；空间 O(n)。
+
+###0283
+// 思路：快慢双指针。slow 指向"下一个非零数应放的位置"，
+// fast 向右扫描，遇到非零数就换到 slow 处，slow 右移。
+class Solution {
+    public void moveZeroes(int[] nums) {
+        int slow = 0;
+        for (int fast = 0; fast < nums.length; fast++) {
+            if (nums[fast] != 0) {
+                // 交换后，[0, slow) 始终是非零且保持相对顺序的元素
+                int tmp = nums[slow];
+                nums[slow] = nums[fast];
+                nums[fast] = tmp;
+                slow++;
+            }
+        }
+        // 循环结束后 [slow, end) 全是 0
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)，原地完成。
+
+###0011
+// 思路：左右双指针从两端开始，每次移动高度较小的那个指针。
+// 因为水量 = 宽度 * 较小高度，移动较大的一侧只会让宽度变小而高度受限于较小者，
+// 结果不可能更优；移动较小的一侧才可能得到更大的值。
+class Solution {
+    public int maxArea(int[] height) {
+        int left = 0, right = height.length - 1;
+        int best = 0;
+        while (left < right) {
+            int area = (right - left) * Math.min(height[left], height[right]);
+            best = Math.max(best, area);
+            if (height[left] < height[right]) {
+                left++;   // 短板在左，左指针右移尝试找更高的
+            } else {
+                right--;  // 短板在右，右指针左移
+            }
+        }
+        return best;
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+
+###0015
+// 思路：排序 + 固定一个数 i，再用双指针在 i 右侧找两数之和等于 -nums[i]。
+// 排序后天然支持去重：i、left、right 遇到重复值都跳过。
+class Solution {
+    public List<List<Integer>> threeSum(int[] nums) {
+        Arrays.sort(nums);                        // 先排序，O(n log n)
+        List<List<Integer>> res = new ArrayList<>();
+        for (int i = 0; i < nums.length - 2; i++) {
+            if (i > 0 && nums[i] == nums[i - 1]) continue; // 跳过重复的固定数
+            if (nums[i] + nums[i + 1] + nums[i + 2] > 0) break; // 最小三个数都 > 0，后面无解
+            if (nums[i] + nums[nums.length - 2] + nums[nums.length - 1] < 0) continue; // i 太小
+
+            int left = i + 1, right = nums.length - 1;
+            while (left < right) {
+                int sum = nums[i] + nums[left] + nums[right];
+                if (sum < 0) {
+                    left++;                       // 和太小，左指针右移
+                } else if (sum > 0) {
+                    right--;                      // 和太大，右指针左移
+                } else {
+                    res.add(Arrays.asList(nums[i], nums[left], nums[right]));
+                    // 跳过重复的 left 和 right
+                    while (left < right && nums[left] == nums[left + 1]) left++;
+                    while (left < right && nums[right] == nums[right - 1]) right--;
+                    left++;
+                    right--;
+                }
+            }
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(n^2)，空间复杂度 O(log n)（排序栈）。
+
+###0042
+// 思路：双指针。每个位置能接的水 = min(左边最高, 右边最高) - 当前高度。
+// 维护 leftMax、rightMax，哪边最大值更小就结算哪边的指针，
+// 因为较小的一侧已经确定了水平面的上界。
+class Solution {
+    public int trap(int[] height) {
+        int left = 0, right = height.length - 1;
+        int leftMax = 0, rightMax = 0;
+        int water = 0;
+        while (left < right) {
+            leftMax = Math.max(leftMax, height[left]);
+            rightMax = Math.max(rightMax, height[right]);
+            if (leftMax < rightMax) {
+                water += leftMax - height[left];  // 左边较矮，水位由 leftMax 决定
+                left++;
+            } else {
+                water += rightMax - height[right];
+                right--;
+            }
+        }
+        return water;
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+// 另解：单调递减栈，遇到更高的柱子时弹栈横向结算雨水。
+
+###0003
+// 思路：滑动窗口。right 右移扩大窗口，若字符重复则 left 右移收缩，
+// 用 HashSet 记录窗口内的字符，保证窗口内始终无重复。
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        Set<Character> window = new HashSet<>();
+        int left = 0, best = 0;
+        for (int right = 0; right < s.length(); right++) {
+            char c = s.charAt(right);
+            // 出现重复时不断缩小左边界，直到移除重复字符
+            while (window.contains(c)) {
+                window.remove(s.charAt(left));
+                left++;
+            }
+            window.add(c);
+            best = Math.max(best, right - left + 1);
+        }
+        return best;
+    }
+}
+// 时间复杂度 O(n)（每个字符最多进出窗口各一次），空间 O(|字符集|)。
+// 进阶：用 HashMap 记录每个字符最后出现的位置，left 直接跳转，常数更小。
+
+###0438
+// 思路：固定长度的滑动窗口 + 字符计数数组。
+// 窗口大小始终为 p.length()，比较窗口内计数与 p 的计数是否相等。
+// 用一个 diff 变量记录"计数不同的字母种类数"可把比较降到 O(1)。
+class Solution {
+    public List<Integer> findAnagrams(String s, String p) {
+        List<Integer> res = new ArrayList<>();
+        int m = s.length(), n = p.length();
+        if (m < n) return res;
+
+        int[] cntP = new int[26];   // p 的字符计数
+        int[] cntW = new int[26];   // 当前窗口的字符计数
+        for (int i = 0; i < n; i++) {
+            cntP[p.charAt(i) - 'a']++;
+            cntW[s.charAt(i) - 'a']++;
+        }
+        if (Arrays.equals(cntP, cntW)) res.add(0);
+
+        for (int i = n; i < m; i++) {
+            cntW[s.charAt(i) - 'a']++;          // 右端进一个字符
+            cntW[s.charAt(i - n) - 'a']--;      // 左端出一个字符
+            if (Arrays.equals(cntP, cntW)) res.add(i - n + 1);
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(26n) ≈ O(n)，空间 O(26)。
+
+###0560
+// 思路：前缀和 + 哈希表。
+// sum(j..i) = pre[i] - pre[j-1] = k  =>  pre[j-1] = pre[i] - k。
+// 边遍历边用哈希表统计每个前缀和出现的次数，答案累加 map.get(pre - k)。
+class Solution {
+    public int subarraySum(int[] nums, int k) {
+        Map<Integer, Integer> count = new HashMap<>();
+        count.put(0, 1);      // 空前缀，表示"从头开始的子数组和为 k"
+        int pre = 0, ans = 0;
+        for (int x : nums) {
+            pre += x;                             // 当前前缀和
+            ans += count.getOrDefault(pre - k, 0); // 有多少个更早的前缀和等于 pre-k
+            count.merge(pre, 1, Integer::sum);    // 记录当前前缀和（要先查再存！）
+        }
+        return ans;
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。
+// 注意必须先查询再存入当前前缀和，否则当 k=0 时会把自己算进去。
+
+###0239
+// 思路：单调递减队列（存下标）。队头到队尾的值单调递减：
+// 队头永远是窗口内最大值；新元素入队前把比它小的都弹出（它们不可能再成为最大值）；
+// 队头超出窗口范围时从头部移除。
+class Solution {
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        int n = nums.length;
+        int[] res = new int[n - k + 1];
+        Deque<Integer> dq = new ArrayDeque<>();   // 存下标，对应值单调递减
+
+        for (int i = 0; i < n; i++) {
+            // 1) 队头下标已滑出窗口（窗口左边界是 i-k+1），移除
+            if (!dq.isEmpty() && dq.peekFirst() <= i - k) {
+                dq.pollFirst();
+            }
+            // 2) 队尾值 <= 当前值 的都不可能再成为答案，弹出
+            while (!dq.isEmpty() && nums[dq.peekLast()] <= nums[i]) {
+                dq.pollLast();
+            }
+            dq.addLast(i);
+            // 3) 窗口形成后（i >= k-1），队头即当前窗口最大值
+            if (i >= k - 1) {
+                res[i - k + 1] = nums[dq.peekFirst()];
+            }
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(n)：每个下标最多进出队列一次；空间 O(k)。
+
+###0076
+// 思路：滑动窗口。right 扩张直到窗口包含 t 的所有字符（need 计数），
+// 然后 left 尽量收缩，收缩过程中记录最短窗口。need 用哈希表维护。
+class Solution {
+    public String minWindow(String s, String t) {
+        Map<Character, Integer> need = new HashMap<>();
+        for (char c : t.toCharArray()) {
+            need.merge(c, 1, Integer::sum);       // t 中每个字符需要的数量
+        }
+        // window 记录窗口内各字符数量；valid 记录"数量已满足的字符种类数"
+        Map<Character, Integer> window = new HashMap<>();
+        int left = 0, valid = 0;
+        int start = 0, minLen = Integer.MAX_VALUE;
+
+        for (int right = 0; right < s.length(); right++) {
+            char c = s.charAt(right);
+            if (need.containsKey(c)) {
+                window.merge(c, 1, Integer::sum);
+                if (window.get(c).intValue() == need.get(c).intValue()) {
+                    valid++;                      // 该字符种类刚好凑够
+                }
+            }
+            // 窗口已包含 t 的全部字符，尝试收缩左边界
+            while (valid == need.size()) {
+                if (right - left + 1 < minLen) {  // 更新最短答案
+                    start = left;
+                    minLen = right - left + 1;
+                }
+                char d = s.charAt(left);
+                if (need.containsKey(d)) {
+                    if (window.get(d).intValue() == need.get(d).intValue()) {
+                        valid--;                  // 移出后该字符不再满足
+                    }
+                    window.merge(d, -1, Integer::sum);
+                }
+                left++;
+            }
+        }
+        return minLen == Integer.MAX_VALUE ? "" : s.substring(start, start + minLen);
+    }
+}
+// 时间复杂度 O(|s| + |t|)，空间 O(|字符集|)。
+
+###0053
+// 思路：动态规划（Kadane 算法）。
+// f(i) = 以 i 结尾的最大子数组和，转移：f(i) = max(nums[i], f(i-1) + nums[i])。
+// 要么接上前面的子数组，要么自己另起一段。
+class Solution {
+    public int maxSubArray(int[] nums) {
+        int cur = 0, best = Integer.MIN_VALUE;
+        for (int x : nums) {
+            cur = Math.max(x, cur + x);           // 接不接前面的子数组
+            best = Math.max(best, cur);
+        }
+        return best;
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+
+###0056
+// 思路：按区间左端点排序，然后线性扫描：
+// 当前区间与已合并的最后一个区间重叠（start <= lastEnd）就扩展右端点，否则新开一段。
+class Solution {
+    public int[][] merge(int[][] intervals) {
+        // 按左端点升序排序
+        Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+        List<int[]> merged = new ArrayList<>();
+        for (int[] cur : intervals) {
+            if (!merged.isEmpty() && cur[0] <= merged.get(merged.size() - 1)[1]) {
+                // 重叠：右端点取两者较大值
+                int[] last = merged.get(merged.size() - 1);
+                last[1] = Math.max(last[1], cur[1]);
+            } else {
+                merged.add(cur);                  // 不重叠，直接加入
+            }
+        }
+        return merged.toArray(new int[0][]);
+    }
+}
+// 时间复杂度 O(n log n)（排序），空间 O(log n)。
+
+###0189
+// 思路：三次翻转法，O(1) 空间。
+// 先整体翻转，再翻转前 k 个，再翻转剩余 n-k 个。
+// 例：[1,2,3,4,5,6,7] k=3 -> [7,6,5,4,3,2,1] -> [5,6,7,4,3,2,1] -> [5,6,7,1,2,3,4]
+class Solution {
+    public void rotate(int[] nums, int k) {
+        int n = nums.length;
+        k %= n;                                   // k 可能大于 n
+        reverse(nums, 0, n - 1);
+        reverse(nums, 0, k - 1);
+        reverse(nums, k, n - 1);
+    }
+
+    private void reverse(int[] nums, int l, int r) {
+        while (l < r) {
+            int t = nums[l];
+            nums[l] = nums[r];
+            nums[r] = t;
+            l++;
+            r--;
+        }
+    }
+}
+// 时间复杂度 O(n)，空间复杂度 O(1)。
+
+###0238
+// 思路：不用除法求"除自身外的乘积"。
+// answer[i] = (i 左边所有数的乘积) * (i 右边所有数的乘积)。
+// 先从左到右填前缀乘积，再从右往左乘上后缀乘积（用变量滚动，省掉右数组）。
+class Solution {
+    public int[] productExceptSelf(int[] nums) {
+        int n = nums.length;
+        int[] answer = new int[n];
+
+        answer[0] = 1;                            // 第一个数左边没有元素，前缀积为 1
+        for (int i = 1; i < n; i++) {
+            answer[i] = answer[i - 1] * nums[i - 1]; // 左侧全部元素的乘积
+        }
+
+        int suffix = 1;                           // 右侧元素的乘积（滚动变量）
+        for (int i = n - 1; i >= 0; i--) {
+            answer[i] *= suffix;
+            suffix *= nums[i];
+        }
+        return answer;
+    }
+}
+// 时间复杂度 O(n)，除输出数组外空间 O(1)。
+
+###0041
+// 思路：答案一定在 [1, n+1]（n 为数组长度）内。
+// 原地哈希：把值 x（1<=x<=n）换到下标 x-1 上，然后第一个 nums[i] != i+1 的位置，
+// i+1 就是缺失的最小正数；若全部归位则答案为 n+1。
+class Solution {
+    public int firstMissingPositive(int[] nums) {
+        int n = nums.length;
+        for (int i = 0; i < n; i++) {
+            // 只把 1..n 范围内的数归位；用 while 是因为换来的新数也要归位
+            while (nums[i] >= 1 && nums[i] <= n
+                    && nums[nums[i] - 1] != nums[i]) {
+                // 交换 nums[i] 和 nums[nums[i]-1]，把值 x 放到下标 x-1
+                int tmp = nums[nums[i] - 1];
+                nums[nums[i] - 1] = nums[i];
+                nums[i] = tmp;
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            if (nums[i] != i + 1) {
+                return i + 1;                     // 第一个没归位的位置
+            }
+        }
+        return n + 1;                             // 1..n 全部在，答案是 n+1
+    }
+}
+// 时间复杂度 O(n)（每个数最多被交换一次就归位），空间 O(1)。
+
+###0073
+// 思路：用矩阵第一行/第一列作为标记数组，把空间降到 O(1)。
+// 先用两个变量记录第一行、第一列本身是否含 0，再扫描内部打标记，最后统一清零。
+class Solution {
+    public void setZeroes(int[][] matrix) {
+        int m = matrix.length, n = matrix[0].length;
+        boolean firstRowZero = false, firstColZero = false;
+
+        // 1) 检查第一行、第一列自身是否含 0
+        for (int j = 0; j < n; j++) {
+            if (matrix[0][j] == 0) firstRowZero = true;
+        }
+        for (int i = 0; i < m; i++) {
+            if (matrix[i][0] == 0) firstColZero = true;
+        }
+
+        // 2) 扫描内部区域，把含 0 的行列信息写到第一行/第一列
+        for (int i = 1; i < m; i++) {
+            for (int j = 1; j < n; j++) {
+                if (matrix[i][j] == 0) {
+                    matrix[i][0] = 0;             // 标记第 i 行要清零
+                    matrix[0][j] = 0;             // 标记第 j 列要清零
+                }
+            }
+        }
+
+        // 3) 根据标记清零内部
+        for (int i = 1; i < m; i++) {
+            for (int j = 1; j < n; j++) {
+                if (matrix[i][0] == 0 || matrix[0][j] == 0) {
+                    matrix[i][j] = 0;
+                }
+            }
+        }
+
+        // 4) 最后处理第一行、第一列
+        if (firstRowZero) {
+            for (int j = 0; j < n; j++) matrix[0][j] = 0;
+        }
+        if (firstColZero) {
+            for (int i = 0; i < m; i++) matrix[i][0] = 0;
+        }
+    }
+}
+// 时间复杂度 O(mn)，空间复杂度 O(1)。
+
+###0054
+// 思路：模拟。维护上、下、左、右四个边界，按 右->下->左->上 逐层收缩遍历。
+class Solution {
+    public List<Integer> spiralOrder(int[][] matrix) {
+        List<Integer> res = new ArrayList<>();
+        int top = 0, bottom = matrix.length - 1;
+        int left = 0, right = matrix[0].length - 1;
+
+        while (top <= bottom && left <= right) {
+            for (int j = left; j <= right; j++) res.add(matrix[top][j]);      // 上行向右
+            for (int i = top + 1; i <= bottom; i++) res.add(matrix[i][right]);// 右列向下
+            if (top < bottom) {
+                for (int j = right - 1; j >= left; j--) res.add(matrix[bottom][j]); // 下行向左
+            }
+            if (left < right) {
+                for (int i = bottom - 1; i > top; i--) res.add(matrix[i][left]);    // 左列向上
+            }
+            top++;
+            bottom--;
+            left++;
+            right--;
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(mn)，空间 O(1)（不计输出）。
+// 注意 top<bottom、left<right 的判断防止单行/单列时重复遍历。
+
+###0048
+// 思路：顺时针旋转 90 度 = 先沿主对角线转置，再左右翻转每一行。
+class Solution {
+    public void rotate(int[][] matrix) {
+        int n = matrix.length;
+
+        // 1) 转置：matrix[i][j] 与 matrix[j][i] 交换（只遍历上三角）
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                int t = matrix[i][j];
+                matrix[i][j] = matrix[j][i];
+                matrix[j][i] = t;
+            }
+        }
+
+        // 2) 每一行左右翻转
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n / 2; j++) {
+                int t = matrix[i][j];
+                matrix[i][j] = matrix[i][n - 1 - j];
+                matrix[i][n - 1 - j] = t;
+            }
+        }
+    }
+}
+// 时间复杂度 O(n^2)，空间复杂度 O(1)，原地完成。

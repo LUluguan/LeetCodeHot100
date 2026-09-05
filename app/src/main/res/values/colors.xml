@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="lc_orange">#FFA116</color>
+    <color name="lc_orange_dark">#E08900</color>
+    <color name="lc_orange_light">#FFF3E5</color>
+    <color name="white">#FFFFFF</color>
+    <color name="bg">#F6F7F8</color>
+    <color name="card_stroke">#E5E7EB</color>
+    <color name="chip_bg">#ECEFF3</color>
+    <color name="text_main">#1F2329</color>
+    <color name="text_sub">#7A8190</color>
+    <color name="easy_green">#2DB55D</color>
+    <color name="medium_orange">#FFA116</color>
+    <color name="hard_red">#EF4743</color>
+    <color name="code_bg">#23262D</color>
+    <color name="code_text">#E9ECF2</color>
+    <color name="easy_bg">#E6F6EC</color>
+    <color name="medium_bg">#FFF3E5</color>
+    <color name="hard_bg">#FDEBEA</color>
+    <color name="ic_launcher_background">#FFA116</color>
+</resources>

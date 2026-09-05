@@ -1,0 +1,583 @@
+###0131
+// 思路：回溯 + 动态预处理回文表。
+// dp[i][j] 表示 s[i..j] 是否回文，提前算好避免回溯中重复判断。
+// 回溯时每次从 start 截取回文前缀加入 path。
+class Solution {
+    private boolean[][] isPal;                    // isPal[i][j]: s[i..j] 是否回文
+    private final List<List<String>> res = new ArrayList<>();
+    private final List<String> path = new ArrayList<>();
+    private String s;
+
+    public List<List<String>> partition(String s) {
+        this.s = s;
+        int n = s.length();
+        isPal = new boolean[n][n];
+        // 动态规划：isPal[i][j] = (s[i]==s[j]) && (j-i<2 || isPal[i+1][j-1])
+        for (int i = n - 1; i >= 0; i--) {
+            for (int j = i; j < n; j++) {
+                isPal[i][j] = s.charAt(i) == s.charAt(j)
+                        && (j - i < 2 || isPal[i + 1][j - 1]);
+            }
+        }
+        backtrack(0);
+        return res;
+    }
+
+    private void backtrack(int start) {
+        if (start == s.length()) {
+            res.add(new ArrayList<>(path));       // 整个串分割完成
+            return;
+        }
+        for (int end = start; end < s.length(); end++) {
+            if (isPal[start][end]) {              // s[start..end] 是回文才选
+                path.add(s.substring(start, end + 1));
+                backtrack(end + 1);
+                path.remove(path.size() - 1);
+            }
+        }
+    }
+}
+// 时间复杂度 O(n * 2^n)（最坏每个字符都自成回文段），空间 O(n^2)。
+
+###0051
+// 思路：逐行放置皇后。cols、diag1（主对角线 r-c）、diag2（副对角线 r+c）
+// 用集合记录被攻击的列/对角线，回溯每一行的合法列。
+// 对角线性质：同一主对角线 r-c 恒定；同一副对角线 r+c 恒定。
+class Solution {
+    private final List<List<String>> res = new ArrayList<>();
+    private Set<Integer> cols = new HashSet<>();
+    private Set<Integer> diag1 = new HashSet<>(); // r - c
+    private Set<Integer> diag2 = new HashSet<>(); // r + c
+    private int n;
+
+    public List<List<String>> solveNQueens(int n) {
+        this.n = n;
+        backtrack(new int[n], 0);                 // queens[r] = 该行皇后所在列
+        return res;
+    }
+
+    private void backtrack(int[] queens, int row) {
+        if (row == n) {
+            res.add(buildBoard(queens));          // 所有行都放好了
+            return;
+        }
+        for (int col = 0; col < n; col++) {
+            if (cols.contains(col)) continue;
+            if (diag1.contains(row - col)) continue;
+            if (diag2.contains(row + col)) continue;
+
+            queens[row] = col;                    // 做选择
+            cols.add(col);
+            diag1.add(row - col);
+            diag2.add(row + col);
+
+            backtrack(queens, row + 1);
+
+            cols.remove(col);                     // 撤销选择
+            diag1.remove(row - col);
+            diag2.remove(row + col);
+        }
+    }
+
+    private List<String> buildBoard(int[] queens) {
+        List<String> board = new ArrayList<>();
+        for (int r = 0; r < n; r++) {
+            char[] row = new char[n];
+            Arrays.fill(row, '.');
+            row[queens[r]] = 'Q';
+            board.add(new String(row));
+        }
+        return board;
+    }
+}
+// 时间复杂度 O(n!)，空间 O(n)。
+
+###0035
+// 思路：标准二分。当找不到 target 时，left 最终停在"第一个大于等于 target 的位置"，即插入点。
+class Solution {
+    public int searchInsert(int[] nums, int target) {
+        int left = 0, right = nums.length - 1;
+        while (left <= right) {
+            int mid = (left + right) / 2;         // 防溢出可写 left + (right-left)/2
+            if (nums[mid] == target) return mid;
+            else if (nums[mid] < target) left = mid + 1;
+            else right = mid - 1;
+        }
+        return left;                              // 插入位置
+    }
+}
+// 时间复杂度 O(log n)，空间 O(1)。
+
+###0074
+// 思路：把矩阵看成一维有序数组做二分。
+// 一维下标 idx 映射回矩阵：row = idx / n，col = idx % n。
+class Solution {
+    public boolean searchMatrix(int[][] matrix, int target) {
+        int m = matrix.length, n = matrix[0].length;
+        int left = 0, right = m * n - 1;
+        while (left <= right) {
+            int mid = (left + right) / 2;
+            int val = matrix[mid / n][mid % n];   // 一维下标转二维坐标
+            if (val == target) return true;
+            else if (val < target) left = mid + 1;
+            else right = mid - 1;
+        }
+        return false;
+    }
+}
+// 时间复杂度 O(log(mn))，空间 O(1)。
+
+###0034
+// 思路：两次二分。一次找左边界（第一个 >= target 的位置），
+// 一次找右边界（最后一个 == target 的位置，即第一个 >= target+1 的前一个）。
+class Solution {
+    public int[] searchRange(int[] nums, int target) {
+        int first = lowerBound(nums, target);     // 第一个 >= target 的下标
+        if (first == nums.length || nums[first] != target) {
+            return new int[]{-1, -1};             // target 不存在
+        }
+        int last = lowerBound(nums, target + 1) - 1; // 第一个 > target 的前一个
+        return new int[]{first, last};
+    }
+
+    // 返回第一个 >= target 的下标（若都不小于则返回 nums.length）
+    private int lowerBound(int[] nums, int target) {
+        int left = 0, right = nums.length;        // 注意 right 是开区间
+        while (left < right) {
+            int mid = (left + right) / 2;
+            if (nums[mid] >= target) {
+                right = mid;                      // mid 可能是答案，收缩右边界
+            } else {
+                left = mid + 1;
+            }
+        }
+        return left;
+    }
+}
+// 时间复杂度 O(log n)，空间 O(1)。
+
+###0033
+// 思路：旋转数组的二分。mid 把数组分成两半，至少有一半是有序的：
+// 若左半有序（nums[left] <= nums[mid]），target 在左半的有序区间内就查左边，否则查右边；
+// 否则右半有序，同理判断。
+class Solution {
+    public int search(int[] nums, int target) {
+        int left = 0, right = nums.length - 1;
+        while (left <= right) {
+            int mid = (left + right) / 2;
+            if (nums[mid] == target) return mid;
+            if (nums[left] <= nums[mid]) {        // 左半 [left, mid] 有序
+                if (nums[left] <= target && target < nums[mid]) {
+                    right = mid - 1;              // target 在有序的左半内
+                } else {
+                    left = mid + 1;
+                }
+            } else {                              // 右半 [mid, right] 有序
+                if (nums[mid] < target && target <= nums[right]) {
+                    left = mid + 1;               // target 在有序的右半内
+                } else {
+                    right = mid - 1;
+                }
+            }
+        }
+        return -1;
+    }
+}
+// 时间复杂度 O(log n)，空间 O(1)。
+
+###0153
+// 思路：二分。最小值落在"无序的那一半"。
+// 若 nums[mid] > nums[right]，最小值一定在 mid 右侧；否则在 mid 左侧（含 mid）。
+class Solution {
+    public int findMin(int[] nums) {
+        int left = 0, right = nums.length - 1;
+        while (left < right) {
+            int mid = (left + right) / 2;
+            if (nums[mid] > nums[right]) {
+                left = mid + 1;                   // 最小值在 (mid, right]
+            } else {
+                right = mid;                      // 最小值在 [left, mid]
+            }
+        }
+        return nums[left];                        // left == right 即最小值
+    }
+}
+// 时间复杂度 O(log n)，空间 O(1)。
+
+###0004
+// 思路：二分求第 k 小。在较短数组上二分"分界线" i，
+// 另一个数组自动得到 j = k - i，检查分割是否合法（左边最大 <= 右边最小）。
+// 合法时按总长奇偶计算中位数。
+class Solution {
+    public double findMedianSortedArrays(int[] nums1, int[] nums2) {
+        // 保证在较短的数组上二分
+        if (nums1.length > nums2.length) {
+            int[] t = nums1;
+            nums1 = nums2;
+            nums2 = t;
+        }
+        int m = nums1.length, n = nums2.length;
+        int leftHalf = (m + n + 1) / 2;           // 中位数左侧需要的元素数
+
+        int lo = 0, hi = m;
+        while (lo <= hi) {
+            int i = (lo + hi) / 2;                // nums1 贡献 i 个到左半
+            int j = leftHalf - i;                 // nums2 贡献 j 个
+            int iLeftMax = (i == 0) ? Integer.MIN_VALUE : nums1[i - 1];
+            int iRightMin = (i == m) ? Integer.MAX_VALUE : nums1[i];
+            int jLeftMax = (j == 0) ? Integer.MIN_VALUE : nums2[j - 1];
+            int jRightMin = (j == n) ? Integer.MAX_VALUE : nums2[j];
+
+            if (iLeftMax <= jRightMin && jLeftMax <= iRightMin) {
+                // 找到合法分割
+                if ((m + n) % 2 == 1) {
+                    return Math.max(iLeftMax, jLeftMax); // 总数为奇数
+                }
+                return (Math.max(iLeftMax, jLeftMax)
+                        + Math.min(iRightMin, jRightMin)) / 2.0;
+            } else if (iLeftMax > jRightMin) {
+                hi = i - 1;                       // nums1 拿多了，减少 i
+            } else {
+                lo = i + 1;                       // nums1 拿少了，增大 i
+            }
+        }
+        return 0;                                 // 不可能到达（输入保证有序）
+    }
+}
+// 时间复杂度 O(log(min(m, n)))，空间 O(1)。
+
+###0020
+// 思路：栈。左括号入栈；右括号弹出栈顶检查是否配对。
+// 用哈希表维护右->左的配对关系。最后栈为空才有效。
+class Solution {
+    public boolean isValid(String s) {
+        Map<Character, Character> pairs = new HashMap<>();
+        pairs.put(')', '(');
+        pairs.put(']', '[');
+        pairs.put('}', '{');
+
+        Deque<Character> stack = new ArrayDeque<>();
+        for (char c : s.toCharArray()) {
+            if (!pairs.containsKey(c)) {
+                stack.push(c);                    // 左括号入栈
+            } else {
+                // 遇到右括号：栈顶必须是对应左括号
+                if (stack.isEmpty() || stack.pop() != pairs.get(c)) {
+                    return false;
+                }
+            }
+        }
+        return stack.isEmpty();                   // 有剩余左括号也无效
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0155
+// 思路：辅助栈同步维护当前最小值。
+// 每次 push 时，辅助栈压入 min(当前值, 辅助栈顶)，两栈同步出栈，getMin 直接看辅助栈顶。
+class MinStack {
+    private final Deque<Long> stack = new ArrayDeque<>();
+    private long min = 0;                         // 也可以用辅助栈，这里用差值法省空间
+
+    public MinStack() {
+    }
+
+    // 差值法：压入 x - min（long 防溢出），x < min 时更新 min
+    public void push(int val) {
+        if (stack.isEmpty()) {
+            min = val;
+            stack.push(0L);
+        } else {
+            long diff = val - min;
+            stack.push(diff);
+            if (diff < 0) min = val;              // 新的最小值
+        }
+    }
+
+    public void pop() {
+        long diff = stack.pop();
+        if (diff < 0) {
+            min -= diff;                          // 弹出的是最小值，恢复上一个 min
+        }
+    }
+
+    public int top() {
+        long diff = stack.peek();
+        // diff >= 0 说明栈顶不是最小值，真实值 = min + diff
+        return (int) (diff >= 0 ? min + diff : min);
+    }
+
+    public int getMin() {
+        return (int) min;
+    }
+}
+// 所有操作 O(1)；另一种写法是辅助栈与主栈同步 push/pop，思路更直观。
+
+###0394
+// 思路：栈模拟。遇到数字和 '[' 分别压栈；遇到 ']' 弹出字符串和重复次数，
+// 把解码后的结果拼回栈顶字符串。numStack、strStack 同步。
+class Solution {
+    public String decodeString(String s) {
+        Deque<Integer> numStack = new ArrayDeque<>();      // 重复次数
+        Deque<StringBuilder> strStack = new ArrayDeque<>();// 括号外的已有字符串
+        StringBuilder cur = new StringBuilder();
+        int num = 0;
+
+        for (char c : s.toCharArray()) {
+            if (Character.isDigit(c)) {
+                num = num * 10 + (c - '0');       // 数字可能多位
+            } else if (c == '[') {
+                numStack.push(num);               // 保存次数，进入新层级
+                strStack.push(cur);
+                num = 0;
+                cur = new StringBuilder();        // 开始新层
+            } else if (c == ']') {
+                int repeat = numStack.pop();
+                StringBuilder prev = strStack.pop();
+                for (int i = 0; i < repeat; i++) {
+                    prev.append(cur);             // 当前层内容重复 repeat 次
+                }
+                cur = prev;                       // 回到上一层
+            } else {
+                cur.append(c);                    // 普通字母
+            }
+        }
+        return cur.toString();
+    }
+}
+// 时间复杂度 O(输出长度)，空间同。
+
+###0739
+// 思路：单调递减栈（存下标）。温度更高的一天出现时，
+// 栈中所有比它矮（温度低）的下标都能结算出答案。
+class Solution {
+    public int[] dailyTemperatures(int[] temperatures) {
+        int n = temperatures.length;
+        int[] answer = new int[n];
+        Deque<Integer> stack = new ArrayDeque<>(); // 存下标，对应温度单调递减
+
+        for (int i = 0; i < n; i++) {
+            // 当前温度高于栈顶对应温度 => 栈顶的"下一个更高温度"就是今天
+            while (!stack.isEmpty() && temperatures[i] > temperatures[stack.peek()]) {
+                int prev = stack.pop();
+                answer[prev] = i - prev;          // 相隔天数
+            }
+            stack.push(i);                        // 自己也入栈等待更高温度
+        }
+        // 栈里剩下的下标后面没有更高温度，answer 保持 0
+        return answer;
+    }
+}
+// 时间复杂度 O(n)（每个下标最多进出栈一次），空间 O(n)。
+
+###0084
+// 思路：单调递增栈。以每根柱子为高的最大矩形 = 高 * (左右第一个更矮柱子之间的宽度)。
+// 栈中高度递增；当前柱更矮时弹出栈顶，栈顶柱的右边界是当前下标，
+// 左边界是弹出后新栈顶的下标（哨兵 0 高度简化收尾）。
+class Solution {
+    public int largestRectangleArea(int[] heights) {
+        int n = heights.length;
+        int[] extended = new int[n + 1];          // 末尾加哨兵 0，逼出栈中所有元素
+        System.arraycopy(heights, 0, extended, 0, n);
+
+        Deque<Integer> stack = new ArrayDeque<>(); // 存下标，高度单调递增
+        int best = 0;
+        for (int i = 0; i <= n; i++) {
+            while (!stack.isEmpty() && extended[i] < extended[stack.peek()]) {
+                int h = extended[stack.pop()];    // 被弹出柱子的高度
+                // 左边界：弹出后栈顶（若空则为 -1）
+                int left = stack.isEmpty() ? -1 : stack.peek();
+                int width = i - left - 1;         // 宽 = 右边界 - 左边界 - 1
+                best = Math.max(best, h * width);
+            }
+            stack.push(i);
+        }
+        return best;
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0215
+// 思路：快速选择（partition 的二段式）。随机选基准 partition 后，
+// 基准落点若正好是倒数第 k 个位置即答案；否则只在包含答案的一侧递归。
+// 平均时间 O(n)。
+class Solution {
+    public int findKthLargest(int[] nums, int k) {
+        int targetIdx = nums.length - k;          // 升序后第 k 大的下标
+        int left = 0, right = nums.length - 1;
+        while (true) {
+            int pivotIdx = partition(nums, left, right);
+            if (pivotIdx == targetIdx) {
+                return nums[pivotIdx];
+            } else if (pivotIdx < targetIdx) {
+                left = pivotIdx + 1;              // 目标在右侧
+            } else {
+                right = pivotIdx - 1;             // 目标在左侧
+            }
+        }
+    }
+
+    // 随机基准 partition，返回基准最终位置
+    private int partition(int[] nums, int left, int right) {
+        int randomIdx = left + (int) (Math.random() * (right - left + 1));
+        int tmp = nums[randomIdx];
+        nums[randomIdx] = nums[right];
+        nums[right] = tmp;
+        int pivot = nums[right];
+        int i = left;
+        for (int j = left; j < right; j++) {
+            if (nums[j] < pivot) {                // 小于基准的换到左边
+                int t = nums[i];
+                nums[i] = nums[j];
+                nums[j] = t;
+                i++;
+            }
+        }
+        nums[right] = nums[i];                    // 基准归位
+        nums[i] = pivot;
+        return i;
+    }
+}
+// 平均时间复杂度 O(n)，最坏 O(n^2)（随机化后概率极低），空间 O(1)。
+// 另解：维护大小为 k 的小根堆，O(n log k)。
+
+###0347
+// 思路：哈希统计频次 + 桶排序。频次最大不超过 n，
+// 建桶 buckets[f] 装"出现 f 次的所有数"，从高频桶往低频桶收集 k 个即可，严格 O(n)。
+class Solution {
+    public int[] topKFrequent(int[] nums, int k) {
+        Map<Integer, Integer> freq = new HashMap<>();
+        for (int x : nums) {
+            freq.merge(x, 1, Integer::sum);       // 统计每个数出现的次数
+        }
+        // 桶下标 = 出现次数
+        List<Integer>[] buckets = new List[nums.length + 1];
+        for (Map.Entry<Integer, Integer> e : freq.entrySet()) {
+            int f = e.getValue();
+            if (buckets[f] == null) buckets[f] = new ArrayList<>();
+            buckets[f].add(e.getKey());
+        }
+
+        int[] res = new int[k];
+        int idx = 0;
+        for (int f = buckets.length - 1; f >= 0 && idx < k; f--) {
+            if (buckets[f] == null) continue;
+            for (int x : buckets[f]) {            // 从高频到低频收集
+                res[idx++] = x;
+            }
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(n)，空间 O(n)。
+
+###0295
+// 思路：对顶堆。大根堆存较小的一半，小根堆存较大的一半，两堆大小差不超过 1。
+// 加入元素时先入一侧再调整平衡；中位数直接从堆顶取。
+class MedianFinder {
+    private final PriorityQueue<Integer> small;   // 大根堆：较小的一半
+    private final PriorityQueue<Integer> large;   // 小根堆：较大的一半
+
+    public MedianFinder() {
+        small = new PriorityQueue<>((a, b) -> Integer.compare(b, a)); // 大根堆
+        large = new PriorityQueue<>();            // 小根堆（默认）
+    }
+
+    public void addNum(int num) {
+        small.offer(num);                         // 先放进较小的一半
+        large.offer(small.poll());                // 把 small 的最大值挪给 large
+        if (large.size() > small.size()) {
+            small.offer(large.poll());            // 平衡：small 保持 >= large
+        }
+    }
+
+    public double findMedian() {
+        if (small.size() > large.size()) {
+            return small.peek();                  // 奇数个：small 多一个
+        }
+        return (small.peek() + large.peek()) / 2.0;
+    }
+}
+// addNum O(log n)，findMedian O(1)，空间 O(n)。
+
+###0121
+// 思路：一次遍历。记录到当前为止的最低买入价，用"今天卖出"更新最大利润。
+class Solution {
+    public int maxProfit(int[] prices) {
+        int minPrice = Integer.MAX_VALUE;         // 到今天为止的最低价
+        int best = 0;
+        for (int p : prices) {
+            if (p < minPrice) {
+                minPrice = p;                     // 更低的买入点
+            } else {
+                best = Math.max(best, p - minPrice); // 今天卖出的利润
+            }
+        }
+        return best;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0055
+// 思路：贪心。维护"当前能到达的最远下标" maxReach；
+// 扫描时若 i > maxReach 说明当前位置不可达；否则扩展 maxReach，
+// maxReach >= n-1 即可达，可提前返回。
+class Solution {
+    public boolean canJump(int[] nums) {
+        int maxReach = 0;
+        for (int i = 0; i < nums.length; i++) {
+            if (i > maxReach) return false;       // 到不了位置 i
+            maxReach = Math.max(maxReach, i + nums[i]);
+            if (maxReach >= nums.length - 1) return true; // 已经能到最后
+        }
+        return true;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0045
+// 思路：贪心（隐式分层 BFS）。
+// currentEnd 表示当前这一跳能到达的最远边界，扫描到边界时步数 +1，
+// 并把边界更新为扫描过程中记录的最远可达 farthest。
+class Solution {
+    public int jump(int[] nums) {
+        int steps = 0;
+        int currentEnd = 0;                       // 本层跳跃的边界
+        int farthest = 0;                         // 目前能到的最远位置
+        // 注意只扫到 n-2：到达 n-1 之前就统计完所有需要的跳数
+        for (int i = 0; i < nums.length - 1; i++) {
+            farthest = Math.max(farthest, i + nums[i]);
+            if (i == currentEnd) {                // 走到本层边界，必须再跳一次
+                steps++;
+                currentEnd = farthest;
+            }
+        }
+        return steps;
+    }
+}
+// 时间复杂度 O(n)，空间 O(1)。
+
+###0763
+// 思路：先记录每个字母最后出现的位置 last[c]。
+// 扫描时维护当前片段必须延伸到的最远位置 end = max(last[已见字母])，
+// i 到达 end 时说明后面的字母与片段无关，切分一次。
+class Solution {
+    public List<Integer> partitionLabels(String s) {
+        int[] last = new int[26];
+        for (int i = 0; i < s.length(); i++) {
+            last[s.charAt(i) - 'a'] = i;          // 每个字母最后出现的位置
+        }
+
+        List<Integer> res = new ArrayList<>();
+        int start = 0, end = 0;
+        for (int i = 0; i < s.length(); i++) {
+            end = Math.max(end, last[s.charAt(i) - 'a']); // 片段必须包含这些位置
+            if (i == end) {                       // 当前位置就是片段终点
+                res.add(i - start + 1);
+                start = i + 1;
+            }
+        }
+        return res;
+    }
+}
+// 时间复杂度 O(n)，空间 O(26)。
